@@ -394,7 +394,8 @@ const parseLabReport = (text) => {
     patientName,
     labTests,
     impression,
-    diagnosis: labReportName, // used as the display title
+    labReportName,            // dedicated field for the panel name
+    diagnosis: labReportName, // also stored in diagnosis for title display
     notes: impression,        // keep impression accessible as notes too
   };
 };

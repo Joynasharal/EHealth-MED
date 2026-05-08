@@ -30,6 +30,7 @@ const ocrExtract = async (req, res, next) => {
         doctorName: ocrResult.doctorName || '',
         hospitalName: ocrResult.hospitalName || '',
         diagnosis: ocrResult.diagnosis || '',
+        labReportName: ocrResult.labReportName || '',
         notes: ocrResult.notes || '',
         visitDate: ocrResult.visitDate || '',
         medicines: ocrResult.medicines || [],

@@ -151,6 +151,10 @@ const LabReportForm = ({ form, setForm }) => {
           <input className="form-input" placeholder="Dr. Smith" value={form.doctorName} onChange={(e) => setForm({ ...form, doctorName: e.target.value })} />
         </div>
       </div>
+      <div className="form-group">
+        <label className="form-label">Report Name <span style={{ fontWeight: 400, color: 'var(--text-muted)', fontSize: 11 }}>(AI detected — edit if needed)</span></label>
+        <input className="form-input" placeholder="e.g. Complete Blood Count" value={form.diagnosis} onChange={(e) => setForm({ ...form, diagnosis: e.target.value })} />
+      </div>
 
       <div className="form-group">
         <div className="upload-medicines-header">
@@ -379,7 +383,10 @@ const UploadRecord = () => {
         recordType: detectedType,
         doctorName: ext.doctorName || prev.doctorName,
         hospitalName: ext.hospitalName || prev.hospitalName,
-        diagnosis: ext.diagnosis || prev.diagnosis,
+        // For lab reports use the AI panel name; for others use the extracted diagnosis
+        diagnosis: detectedType === 'Lab Report'
+          ? (ext.labReportName || ext.diagnosis || prev.diagnosis)
+          : (ext.diagnosis || prev.diagnosis),
         notes: ext.notes || prev.notes,
         visitDate: ext.visitDate ? tryParseDate(ext.visitDate) : prev.visitDate,
         medicines: ext.medicines?.length > 0 ? ext.medicines : prev.medicines,
