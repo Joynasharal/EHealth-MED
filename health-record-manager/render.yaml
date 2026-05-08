@@ -1,0 +1,46 @@
+services:
+  # ── Backend API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: health-record-manager-api
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false          # Set this in Render dashboard
+      - key: JWT_SECRET
+        sync: false          # Set this in Render dashboard
+      - key: JWT_EXPIRE
+        value: 7d
+      - key: CLIENT_URL
+        sync: false          # Set to your frontend Render URL
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: EMAIL_USER
+        sync: false
+      - key: EMAIL_PASS
+        sync: false
+      - key: MAX_FILE_SIZE
+        value: "10485760"
+
+  # ── Frontend ─────────────────────────────────────────────────────────────────
+  - type: web
+    name: health-record-manager-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: build
+    envVars:
+      - key: REACT_APP_GOOGLE_CLIENT_ID
+        sync: false          # Set this in Render dashboard
+      - key: REACT_APP_API_URL
+        sync: false          # Set to your backend Render URL + /api
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

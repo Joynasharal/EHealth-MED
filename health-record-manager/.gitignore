@@ -1,0 +1,13 @@
+node_modules/
+.env
+uploads/
+*.log
+.DS_Store
+build/
+dist/
+google-credentials.json
+google-credentials-runtime.json
+frontend/.env
+
+# Tesseract language data (auto-downloaded at runtime)
+*.traineddata

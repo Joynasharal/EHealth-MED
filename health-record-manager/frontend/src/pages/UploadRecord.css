@@ -1,0 +1,310 @@
+/* ── Progress steps ──────────────────────────────────────────────────────────── */
+.upload-steps {
+  display: flex;
+  align-items: center;
+  margin-bottom: 28px;
+  padding: 16px 24px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+}
+.upload-step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+.upload-step--active { color: var(--primary); }
+.upload-step--done { color: var(--success); }
+.upload-step__num {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 700;
+  flex-shrink: 0;
+}
+.upload-step--active .upload-step__num { background: var(--primary); color: #fff; }
+.upload-step--done .upload-step__num { background: var(--success); color: #fff; }
+.upload-step__line {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  margin: 0 12px;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
+.upload-layout {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ── Cards ───────────────────────────────────────────────────────────────────── */
+.upload-card, .upload-form-card { padding: 24px; }
+
+.upload-card__title {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 16px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 20px;
+}
+
+.upload-form-card__header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 20px;
+}
+.upload-form-card__header .upload-card__title { margin-bottom: 0; }
+
+/* ── Record type grid ────────────────────────────────────────────────────────── */
+.record-type-grid { display: flex; flex-wrap: wrap; gap: 8px; }
+.record-type-btn {
+  padding: 7px 14px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  transition: all .2s;
+}
+.record-type-btn:hover { border-color: var(--primary); color: var(--primary); }
+.record-type-btn--active { border-color: var(--primary); background: var(--primary-50); color: var(--primary); }
+
+/* ── Dropzone ────────────────────────────────────────────────────────────────── */
+.dropzone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  margin-bottom: 16px;
+}
+.dropzone:hover, .dropzone--active {
+  border-color: var(--primary);
+  background: var(--primary-50);
+}
+.dropzone--has-file {
+  border-style: solid;
+  border-color: var(--success);
+  background: #f0fdf4;
+  padding: 16px 20px;
+}
+.dropzone__icon {
+  width: 56px; height: 56px;
+  background: var(--primary-50);
+  color: var(--primary);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 14px;
+}
+.dropzone__text { font-size: 14px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+.dropzone__hint { font-size: 12px; color: var(--text-muted); }
+.dropzone__file {
+  display: flex; align-items: center; gap: 12px;
+  text-align: left; color: var(--success);
+}
+.dropzone__filename { font-size: 13px; font-weight: 600; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dropzone__filesize { font-size: 11px; color: var(--text-muted); }
+.dropzone__remove {
+  margin-left: auto; flex-shrink: 0;
+  background: none; border: none;
+  color: var(--danger); padding: 4px; border-radius: 6px; cursor: pointer;
+}
+
+/* ── AI Extract button ───────────────────────────────────────────────────────── */
+.upload-ai-btn {
+  width: 100%;
+  justify-content: center;
+  padding: 13px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.upload-ai-btn--loading {
+  background: var(--primary-100);
+  color: var(--primary);
+  border: 1.5px solid var(--primary-100);
+}
+.spin-icon { animation: spin .7s linear infinite; }
+
+/* ── File preview after extraction ──────────────────────────────────────────── */
+.upload-file-preview {
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  margin-bottom: 16px;
+  background: var(--bg);
+}
+.upload-preview-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  display: block;
+}
+.upload-preview-pdf {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 24px;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── OCR result preview ──────────────────────────────────────────────────────── */
+.ocr-preview {
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-top: 4px;
+}
+.ocr-preview__header {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 12px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.ocr-preview__fields { display: flex; flex-direction: column; gap: 8px; }
+
+.extracted-field {
+  display: flex; align-items: flex-start; gap: 10px;
+}
+.extracted-field__icon {
+  width: 28px; height: 28px;
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.extracted-field__label {
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-muted);
+}
+.extracted-field__value {
+  font-size: 13px; font-weight: 600;
+  color: var(--text-primary);
+  margin-top: 1px;
+}
+
+.ocr-raw-text {
+  margin-top: 12px;
+  border-top: 1px solid #bfdbfe;
+  padding-top: 10px;
+}
+.ocr-raw-text summary {
+  font-size: 12px; color: var(--text-muted);
+  cursor: pointer; font-weight: 600;
+}
+.ocr-raw-text pre {
+  font-size: 11px; color: var(--text-secondary);
+  background: rgba(255,255,255,.6);
+  padding: 10px; border-radius: 8px;
+  white-space: pre-wrap; word-break: break-word;
+  max-height: 160px; overflow-y: auto;
+  margin-top: 8px;
+  font-family: 'Courier New', monospace;
+  line-height: 1.5;
+}
+
+/* ── Medicines section ───────────────────────────────────────────────────────── */
+.upload-medicines-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.upload-medicines-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 24px;
+  border: 1.5px dashed var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.medicines-list { border: 1px solid var(--border); border-radius: var(--radius-sm); overflow: hidden; }
+.medicines-list__header {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.2fr 1fr 36px;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg);
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-muted);
+}
+
+.medicine-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1.2fr 1fr 36px;
+  gap: 8px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  align-items: center;
+}
+.medicine-row .form-input { padding: 8px 10px; font-size: 13px; }
+.medicine-remove { padding: 6px; }
+
+/* ── Form actions ────────────────────────────────────────────────────────────── */
+.upload-form-actions {
+  display: flex; justify-content: flex-end; gap: 12px;
+  margin-top: 8px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+@media (max-width: 1100px) {
+  .upload-layout { grid-template-columns: 1fr; }
+  .medicines-list__header,
+  .medicine-row { grid-template-columns: 1fr 1fr; }
+  .medicines-list__header span:nth-child(3),
+  .medicines-list__header span:nth-child(4),
+  .medicines-list__header span:nth-child(5),
+  .medicine-row input:nth-child(3),
+  .medicine-row input:nth-child(4) { display: none; }
+  .medicine-remove { display: flex; }
+}
+
+/* ── Document type grid ──────────────────────────────────────────────────────── */
+.doc-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+.doc-type-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .2s;
+  white-space: nowrap;
+}
+.doc-type-btn:hover { border-color: var(--primary); color: var(--primary); }
+.doc-type-btn--active { font-weight: 700; }
+
+/* ── Detected type badge ─────────────────────────────────────────────────────── */
+.detected-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+/* ── Lab test grid (wider columns) ──────────────────────────────────────────── */
+.medicines-list__header,
+.medicine-row {
+  /* default 5-col for prescriptions */
+}
+/* Lab test rows use inline style override for 6 columns */

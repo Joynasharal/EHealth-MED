@@ -1,0 +1,204 @@
+/* ── Role notice ─────────────────────────────────────────────────────────────── */
+.doctor-role-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #fef3c7;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  color: #92400e;
+  font-size: 13px;
+  max-width: 420px;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
+.doctor-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+.doctor-sidebar { padding: 0; overflow: hidden; }
+.doctor-sidebar__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.doctor-patient-list { display: flex; flex-direction: column; }
+
+.doctor-patient-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s;
+  border-bottom: 1px solid var(--border);
+  width: 100%;
+}
+.doctor-patient-item:last-child { border-bottom: none; }
+.doctor-patient-item:hover { background: var(--bg); }
+.doctor-patient-item--active { background: var(--primary-50); }
+
+.doctor-patient-info { flex: 1; min-width: 0; }
+.doctor-patient-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+.doctor-patient-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.doctor-patient-owner { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+.doctor-patient-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.doctor-patient-expiry {
+  display: flex; align-items: center; gap: 3px;
+  font-size: 10px; color: var(--text-muted);
+}
+
+/* ── Detail panel ────────────────────────────────────────────────────────────── */
+.doctor-detail { min-width: 0; }
+.doctor-detail-inner { display: flex; flex-direction: column; gap: 20px; }
+
+/* ── Patient header ──────────────────────────────────────────────────────────── */
+.doctor-patient-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px;
+}
+.doctor-patient-header__name { font-size: 20px; font-weight: 800; color: var(--text-primary); }
+.doctor-patient-header__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+.doctor-patient-header__meta span { display: flex; align-items: center; gap: 5px; }
+.doctor-patient-header__access { text-align: right; flex-shrink: 0; }
+
+.doctor-access-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  background: var(--primary-50);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── AI card ─────────────────────────────────────────────────────────────────── */
+.doctor-ai-card { padding: 24px; }
+.doctor-ai-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.doctor-ai-icon {
+  width: 44px; height: 44px;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+.doctor-ai-header h3 { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+
+.doctor-summary-tabs { display: flex; gap: 6px; margin-left: auto; }
+.doctor-summary-tab {
+  display: flex; align-items: center; gap: 5px;
+  padding: 6px 12px;
+  border-radius: 99px;
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  font-size: 12px; font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all .2s;
+}
+.doctor-summary-tab:hover { border-color: var(--primary); color: var(--primary); }
+.doctor-summary-tab--active { border-color: var(--primary); background: var(--primary-50); color: var(--primary); }
+
+.doctor-summary-box {
+  background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+  border: 1px solid #bfdbfe;
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.75;
+  margin-bottom: 16px;
+}
+.doctor-summary-box--clinical {
+  background: linear-gradient(135deg, #faf5ff, #eff6ff);
+  border-color: #ddd6fe;
+}
+
+.doctor-ai-section { margin-top: 14px; }
+.doctor-ai-section-label {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+/* ── Timeline ────────────────────────────────────────────────────────────────── */
+.doctor-timeline-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.doctor-records { display: flex; flex-direction: column; gap: 12px; }
+
+.doctor-record {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  transition: all .2s;
+}
+.doctor-record:hover { box-shadow: var(--shadow); }
+
+.doctor-record__left { display: flex; align-items: center; gap: 10px; }
+.doctor-record__type-dot { width: 4px; height: 44px; border-radius: 99px; flex-shrink: 0; }
+.doctor-record__icon {
+  width: 44px; height: 44px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.doctor-record__body { flex: 1; min-width: 0; }
+.doctor-record__top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; flex-wrap: wrap; }
+.doctor-record__title { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+
+.doctor-record__meta {
+  display: flex; flex-wrap: wrap; gap: 12px;
+  font-size: 12px; color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+.doctor-record__meta span { display: flex; align-items: center; gap: 4px; }
+
+.doctor-record__medicines { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 6px; }
+.doctor-record__notes { font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+
+@media (max-width: 1100px) {
+  .doctor-layout { grid-template-columns: 1fr; }
+  .doctor-sidebar { max-height: 320px; overflow-y: auto; }
+}
