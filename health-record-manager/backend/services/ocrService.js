@@ -1,6 +1,7 @@
 const vision = require('@google-cloud/vision');
 const Tesseract = require('tesseract.js');
 const pdfParse = require('pdf-parse');
+const sharp = require('sharp');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -64,15 +65,105 @@ const extractTextFromImageBuffer = async (buffer) => {
   });
 };
 
+// ─── PDF: render pages to images using pdfjs-dist, then OCR each page ────────
+// For scanned PDFs (no text layer), we use pdfjs to extract any embedded text,
+// then fall back to Google Vision's native PDF support or Tesseract on the buffer.
+const extractTextFromScannedPDF = async (buffer) => {
+  console.log('🔄 PDF has no text layer — trying alternative extraction methods...');
+
+  // Method 1: pdfjs-dist text content extraction (handles more PDF variants than pdf-parse)
+  try {
+    const pdfjsLib = require('pdfjs-dist/legacy/build/pdf.js');
+    const loadingTask = pdfjsLib.getDocument({
+      data: new Uint8Array(buffer),
+      useSystemFonts: true,
+      disableFontFace: true,
+    });
+    const pdfDoc = await loadingTask.promise;
+    const numPages = Math.min(pdfDoc.numPages, 10);
+    console.log(`📄 pdfjs: ${pdfDoc.numPages} page(s), processing up to ${numPages}`);
+
+    const pageTexts = [];
+    for (let i = 1; i <= numPages; i++) {
+      try {
+        const page = await pdfDoc.getPage(i);
+        const content = await page.getTextContent();
+        const text = content.items
+          .map((item) => ('str' in item ? item.str : ''))
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (text.length > 5) pageTexts.push(text);
+      } catch (_) {}
+    }
+
+    const combined = pageTexts.join('\n\n').trim();
+    if (combined.length > 30) {
+      console.log(`✅ pdfjs extracted ${combined.length} chars`);
+      return combined;
+    }
+  } catch (err) {
+    console.warn('⚠️  pdfjs extraction failed:', err.message);
+  }
+
+  // Method 2: Google Vision native PDF/TIFF support (documentTextDetection)
+  // Vision can process PDF bytes directly and extract text from scanned pages
+  if (visionClient) {
+    try {
+      console.log('🔄 Sending scanned PDF to Google Vision documentTextDetection...');
+      const [result] = await visionClient.documentTextDetection({
+        image: { content: buffer },
+      });
+      const text = result.fullTextAnnotation?.text || '';
+      if (text.trim().length > 10) {
+        console.log(`✅ Google Vision extracted ${text.length} chars from scanned PDF`);
+        return text;
+      }
+      console.warn('⚠️  Google Vision returned empty text for PDF');
+    } catch (err) {
+      console.warn('⚠️  Google Vision PDF OCR failed:', err.message);
+    }
+  }
+
+  // Method 3: Tesseract directly on the PDF buffer as a last resort
+  // Tesseract can sometimes handle single-page PDFs
+  try {
+    console.log('🔄 Trying Tesseract directly on PDF buffer...');
+    return await withTempFile(buffer, '.pdf', async (tmpPath) => {
+      const result = await Tesseract.recognize(tmpPath, 'eng', {
+        logger: (m) => {
+          if (m.status === 'recognizing text') {
+            process.stdout.write(`\r🔄 Tesseract PDF: ${Math.round(m.progress * 100)}%`);
+          }
+        },
+      });
+      console.log('\n✅ Tesseract PDF extracted', result.data.text.length, 'chars');
+      return result.data.text;
+    });
+  } catch (err) {
+    console.warn('⚠️  Tesseract PDF failed:', err.message);
+  }
+
+  return '';
+};
+
+// ─── PDF extraction: text layer first, image OCR fallback ────────────────────
 const extractTextFromPDFBuffer = async (buffer) => {
+  // Step 1: Try pdf-parse (fast, works for text-layer PDFs)
   try {
     const data = await pdfParse(buffer);
-    console.log('✅ PDF text extracted');
-    return data.text;
+    const text = (data.text || '').trim();
+    if (text.length > 30) {
+      console.log(`✅ PDF text layer extracted: ${text.length} chars`);
+      return text;
+    }
+    console.warn(`⚠️  PDF text layer too short (${text.length} chars) — likely a scanned PDF, trying image OCR`);
   } catch (err) {
-    console.error('❌ PDF extraction failed:', err.message);
-    return '';
+    console.warn('⚠️  pdf-parse failed:', err.message, '— trying image OCR');
   }
+
+  // Step 2: Scanned PDF fallback chain
+  return extractTextFromScannedPDF(buffer);
 };
 
 // ─── STEP 1: Document type detection ─────────────────────────────────────────
