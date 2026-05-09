@@ -6,6 +6,7 @@ import {
   Receipt, Syringe, Pill, Activity, X
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { format } from 'date-fns';
 import './MedicalHistory.css';
 
@@ -169,6 +170,7 @@ const RecordCard = ({ record, onClick }) => {
 // ─── Main page ────────────────────────────────────────────────────────────────
 const MedicalHistory = () => {
   const navigate = useNavigate();
+  const { sharedAccount } = useAuth();
 
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -180,6 +182,7 @@ const MedicalHistory = () => {
     setLoading(true);
     try {
       const params = { page, limit: 10, ...filters };
+      if (sharedAccount?._id) params.ownerUserId = sharedAccount._id;
       Object.keys(params).forEach((k) => !params[k] && delete params[k]);
       const { data } = await api.get('/records', { params });
       setRecords(data.records);
@@ -189,7 +192,7 @@ const MedicalHistory = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters]);
+  }, [filters, sharedAccount]);
 
   useEffect(() => { fetchRecords(1); }, [fetchRecords]);
 

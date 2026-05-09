@@ -8,6 +8,7 @@ import {
   CheckCircle, RefreshCw
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { format, formatDistanceToNow } from 'date-fns';
 import toast from 'react-hot-toast';
 import './ManagedAccount.css';
@@ -135,8 +136,9 @@ const RecordCard = ({ record, onDelete, onNavigate, canManage }) => {
 const ManagedAccount = () => {
   const { ownerUserId } = useParams();
   const navigate = useNavigate();
+  const { enterSharedAccount } = useAuth();
 
-  const [data, setData] = useState(null); // { owner, records, accessType, expiryDate }
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
@@ -144,6 +146,8 @@ const ManagedAccount = () => {
     try {
       const { data: res } = await api.get(`/access/managed-account/${ownerUserId}`);
       setData(res);
+      // Set the shared account context so all pages use this owner's data
+      enterSharedAccount(res.owner, res.accessType);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Access denied or expired');
       navigate('/share');
@@ -210,7 +214,7 @@ const ManagedAccount = () => {
         {canUpload && (
           <button
             className="btn btn-primary btn-sm"
-            onClick={() => navigate(`/upload?managedOwner=${ownerUserId}`)}>
+            onClick={() => navigate('/upload')}>
             <Upload size={13} /> Upload Record
           </button>
         )}
@@ -231,7 +235,7 @@ const ManagedAccount = () => {
             <button
               className="btn btn-primary"
               style={{ marginTop: 16 }}
-              onClick={() => navigate(`/upload?managedOwner=${ownerUserId}`)}>
+              onClick={() => navigate('/upload')}>
               <Upload size={14} /> Upload Record
             </button>
           )}

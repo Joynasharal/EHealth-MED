@@ -26,8 +26,10 @@ const billItemSchema = new mongoose.Schema({
 
 const medicalRecordSchema = new mongoose.Schema(
   {
-    // Records belong directly to a user — no family profile indirection
+    // The account this record belongs to
     ownerUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    // Who actually uploaded it (may differ from owner when shared access is used)
+    uploadedByUserId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
 
     recordType: {
       type: String,

@@ -5,6 +5,7 @@ import {
 } from 'recharts';
 import { TrendingUp, Activity, Sparkles, Brain, AlertCircle, User, Stethoscope } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import './HealthInsights.css';
 
 const COLORS = ['#2563eb', '#7c3aed', '#059669', '#f59e0b', '#ef4444', '#0891b2', '#db2777', '#84cc16'];
@@ -23,6 +24,7 @@ const InsightCard = ({ icon: Icon, title, value, color, sub }) => (
 );
 
 const HealthInsights = () => {
+  const { sharedAccount } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -32,9 +34,10 @@ const HealthInsights = () => {
     const fetch = async () => {
       setLoading(true);
       try {
+        const params = sharedAccount?._id ? { ownerUserId: sharedAccount._id } : {};
         const [analyticsRes, summaryRes] = await Promise.all([
-          api.get('/analytics'),
-          api.get('/summary'),
+          api.get('/analytics', { params }),
+          api.get('/summary', { params }),
         ]);
         setAnalytics(analyticsRes.data.analytics);
         setSummary(summaryRes.data.summary);
@@ -45,7 +48,7 @@ const HealthInsights = () => {
       }
     };
     fetch();
-  }, []);
+  }, [sharedAccount]);
 
   if (loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>

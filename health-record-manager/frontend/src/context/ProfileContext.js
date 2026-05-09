@@ -3,13 +3,10 @@ import { useAuth } from './AuthContext';
 
 const ProfileContext = createContext();
 
-// ProfileContext now just exposes the logged-in user as the "active profile"
-// so existing components that use useProfile() keep working without changes.
+// Thin wrapper — exposes activeOwnerId so pages can use it for API calls
 export const ProfileProvider = ({ children }) => {
-  const { user } = useAuth();
-
-  // Expose user as activeProfile so pages that call activeProfile._id get user._id
-  const activeProfile = user ? { _id: user._id, profileName: user.fullName } : null;
+  const { user, activeOwnerId } = useAuth();
+  const activeProfile = user ? { _id: activeOwnerId || user._id } : null;
 
   return (
     <ProfileContext.Provider value={{ activeProfile, loading: false }}>

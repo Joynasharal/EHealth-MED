@@ -8,12 +8,25 @@ const {
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
 // ─── GET /api/summary ─────────────────────────────────────────────────────────
-// Full summary for the logged-in user's own records
+// Supports ?ownerUserId= for shared account context
 const getHealthSummary = async (req, res, next) => {
   try {
-    const records = await MedicalRecord.find({ ownerUserId: req.user._id, isDeleted: false }).sort({ visitDate: -1 });
-    const summary = generateHealthSummary(records);
+    const requestedOwner = req.query.ownerUserId;
+    let targetOwner = req.user._id;
 
+    if (requestedOwner && requestedOwner !== req.user._id.toString()) {
+      const access = await AccessControl.findOne({
+        ownerUserId: requestedOwner,
+        $or: [{ targetEmail: req.user.email }, { targetUserId: req.user._id }],
+        status: 'active',
+        expiryDate: { $gt: new Date() },
+      });
+      if (!access) return errorResponse(res, 403, 'Access denied');
+      targetOwner = requestedOwner;
+    }
+
+    const records = await MedicalRecord.find({ ownerUserId: targetOwner, isDeleted: false }).sort({ visitDate: -1 });
+    const summary = generateHealthSummary(records);
     return successResponse(res, 200, 'Health summary generated', { summary });
   } catch (error) {
     next(error);

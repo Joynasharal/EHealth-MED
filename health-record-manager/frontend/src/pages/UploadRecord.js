@@ -8,6 +8,7 @@ import {
   ClipboardList, Receipt, Syringe, Activity
 } from 'lucide-react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import './UploadRecord.css';
 
@@ -315,6 +316,7 @@ const emptyForm = (type = 'Prescription') => ({
 // ─── Main UploadRecord component ─────────────────────────────────────────────
 const UploadRecord = () => {
   const navigate = useNavigate();
+  const { sharedAccount } = useAuth();
 
   const [phase, setPhase] = useState('idle');
   const [file, setFile] = useState(null);
@@ -407,9 +409,9 @@ const UploadRecord = () => {
     setPhase('saving');
     try {
       const fd = new FormData();
-      // Include extracted text from OCR if available
       if (ocrResult?.extractedText) fd.append('extractedText', ocrResult.extractedText);
-      // Append all form fields
+      // If operating in shared account context, tell backend which owner to use
+      if (sharedAccount?._id) fd.append('ownerUserId', sharedAccount._id);
       const jsonFields = ['medicines', 'labTests', 'lineItems'];
       Object.entries(form).forEach(([k, v]) => {
         if (jsonFields.includes(k)) fd.append(k, JSON.stringify(v));

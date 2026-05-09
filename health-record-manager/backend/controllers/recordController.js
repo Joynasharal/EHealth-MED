@@ -1,10 +1,55 @@
 const MedicalRecord = require('../models/MedicalRecord');
+const AccessControl = require('../models/AccessControl');
 const { runOCR } = require('../services/ocrService');
 const { successResponse, errorResponse } = require('../utils/apiResponse');
 
 const parseJSON = (str, fallback = []) => {
   if (!str) return fallback;
   try { return JSON.parse(str); } catch { return fallback; }
+};
+
+// ─── Helper: resolve which userId to use as the record owner ─────────────────
+// If the request includes a valid `ownerUserId` (shared account context),
+// verify the logged-in user has active access to that account, then use it.
+// Otherwise fall back to the logged-in user's own ID.
+const resolveOwner = async (req) => {
+  const requestedOwner = req.body.ownerUserId || req.query.ownerUserId;
+
+  if (!requestedOwner || requestedOwner === req.user._id.toString()) {
+    return { ownerUserId: req.user._id, uploadedByUserId: null };
+  }
+
+  // Verify active access grant
+  const access = await AccessControl.findOne({
+    ownerUserId: requestedOwner,
+    $or: [{ targetEmail: req.user.email }, { targetUserId: req.user._id }],
+    status: 'active',
+    expiryDate: { $gt: new Date() },
+    accessType: { $in: ['upload', 'manage'] },
+  });
+
+  if (!access) {
+    return null; // no permission
+  }
+
+  return { ownerUserId: requestedOwner, uploadedByUserId: req.user._id };
+};
+
+// ─── Helper: check read/write access to a record ─────────────────────────────
+// Returns true if the user owns the record OR has an active grant from the owner
+const canAccessRecord = async (record, userId, userEmail, requireWrite = false) => {
+  if (record.ownerUserId.toString() === userId.toString()) return true;
+
+  const query = {
+    ownerUserId: record.ownerUserId,
+    $or: [{ targetEmail: userEmail }, { targetUserId: userId }],
+    status: 'active',
+    expiryDate: { $gt: new Date() },
+  };
+  if (requireWrite) query.accessType = { $in: ['upload', 'manage'] };
+
+  const access = await AccessControl.findOne(query);
+  return !!access;
 };
 
 // ─── POST /api/records/ocr-extract ───────────────────────────────────────────
@@ -57,6 +102,13 @@ const ocrExtract = async (req, res, next) => {
 // ─── POST /api/records/upload ─────────────────────────────────────────────────
 const uploadRecord = async (req, res, next) => {
   try {
+    // Resolve owner — supports shared account context
+    const ownership = await resolveOwner(req);
+    if (!ownership) {
+      return errorResponse(res, 403, 'You do not have upload access to this account');
+    }
+    const { ownerUserId, uploadedByUserId } = ownership;
+
     const { recordType, extractedText } = req.body;
 
     let ocrData = {};
@@ -70,7 +122,8 @@ const uploadRecord = async (req, res, next) => {
 
     const b = req.body;
     const record = await MedicalRecord.create({
-      ownerUserId:          req.user._id,
+      ownerUserId,
+      uploadedByUserId,
       recordType:           recordType || ocrData.documentType || 'Other',
       doctorName:           b.doctorName || ocrData.doctorName || '',
       hospitalName:         b.hospitalName || ocrData.hospitalName || '',
@@ -105,10 +158,25 @@ const uploadRecord = async (req, res, next) => {
 };
 
 // ─── GET /api/records ─────────────────────────────────────────────────────────
+// Supports ?ownerUserId= for shared account context
 const getRecords = async (req, res, next) => {
   try {
+    const requestedOwner = req.query.ownerUserId;
+    let targetOwner = req.user._id;
+
+    if (requestedOwner && requestedOwner !== req.user._id.toString()) {
+      const access = await AccessControl.findOne({
+        ownerUserId: requestedOwner,
+        $or: [{ targetEmail: req.user.email }, { targetUserId: req.user._id }],
+        status: 'active',
+        expiryDate: { $gt: new Date() },
+      });
+      if (!access) return errorResponse(res, 403, 'Access denied to this account');
+      targetOwner = requestedOwner;
+    }
+
     const { search, doctor, hospital, diagnosis, recordType, startDate, endDate, page = 1, limit = 10 } = req.query;
-    const query = { ownerUserId: req.user._id, isDeleted: false };
+    const query = { ownerUserId: targetOwner, isDeleted: false };
 
     if (search) {
       query.$or = [
@@ -143,8 +211,12 @@ const getRecords = async (req, res, next) => {
 // ─── GET /api/records/detail/:id ─────────────────────────────────────────────
 const getRecord = async (req, res, next) => {
   try {
-    const record = await MedicalRecord.findOne({ _id: req.params.id, ownerUserId: req.user._id, isDeleted: false });
+    const record = await MedicalRecord.findOne({ _id: req.params.id, isDeleted: false });
     if (!record) return errorResponse(res, 404, 'Record not found');
+
+    const hasAccess = await canAccessRecord(record, req.user._id, req.user.email);
+    if (!hasAccess) return errorResponse(res, 403, 'Access denied');
+
     return successResponse(res, 200, 'Record fetched', { record });
   } catch (error) { next(error); }
 };
@@ -152,8 +224,11 @@ const getRecord = async (req, res, next) => {
 // ─── GET /api/records/detail/:id/download ────────────────────────────────────
 const downloadRecord = async (req, res, next) => {
   try {
-    const record = await MedicalRecord.findOne({ _id: req.params.id, ownerUserId: req.user._id, isDeleted: false });
+    const record = await MedicalRecord.findOne({ _id: req.params.id, isDeleted: false });
     if (!record) return errorResponse(res, 404, 'Record not found');
+
+    const hasAccess = await canAccessRecord(record, req.user._id, req.user.email);
+    if (!hasAccess) return errorResponse(res, 403, 'Access denied');
 
     const lines = [];
     const add = (label, value) => { if (value) lines.push(`${label}: ${value}`); };
@@ -251,6 +326,12 @@ const downloadRecord = async (req, res, next) => {
 // ─── PUT /api/records/:id ─────────────────────────────────────────────────────
 const updateRecord = async (req, res, next) => {
   try {
+    const record = await MedicalRecord.findOne({ _id: req.params.id, isDeleted: false });
+    if (!record) return errorResponse(res, 404, 'Record not found');
+
+    const hasAccess = await canAccessRecord(record, req.user._id, req.user.email, true);
+    if (!hasAccess) return errorResponse(res, 403, 'Access denied');
+
     const b = req.body;
     const updates = {
       recordType: b.recordType, doctorName: b.doctorName, hospitalName: b.hospitalName,
@@ -267,23 +348,23 @@ const updateRecord = async (req, res, next) => {
     };
     Object.keys(updates).forEach((k) => updates[k] === undefined && delete updates[k]);
 
-    const record = await MedicalRecord.findOneAndUpdate(
-      { _id: req.params.id, ownerUserId: req.user._id, isDeleted: false },
-      updates, { new: true, runValidators: true }
+    const updated = await MedicalRecord.findByIdAndUpdate(
+      req.params.id, updates, { new: true, runValidators: true }
     );
-    if (!record) return errorResponse(res, 404, 'Record not found');
-    return successResponse(res, 200, 'Record updated', { record });
+    return successResponse(res, 200, 'Record updated', { record: updated });
   } catch (error) { next(error); }
 };
 
 // ─── DELETE /api/records/:id ──────────────────────────────────────────────────
 const deleteRecord = async (req, res, next) => {
   try {
-    const record = await MedicalRecord.findOneAndUpdate(
-      { _id: req.params.id, ownerUserId: req.user._id },
-      { isDeleted: true }, { new: true }
-    );
+    const record = await MedicalRecord.findOne({ _id: req.params.id, isDeleted: false });
     if (!record) return errorResponse(res, 404, 'Record not found');
+
+    const hasAccess = await canAccessRecord(record, req.user._id, req.user.email, true);
+    if (!hasAccess) return errorResponse(res, 403, 'Access denied');
+
+    await MedicalRecord.findByIdAndUpdate(req.params.id, { isDeleted: true });
     return successResponse(res, 200, 'Record deleted successfully');
   } catch (error) { next(error); }
 };

@@ -7,6 +7,8 @@ const AuthContext = createContext();
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  // sharedAccount: { _id, fullName, email, profilePhoto, accessType } | null
+  const [sharedAccount, setSharedAccount] = useState(null);
 
   useEffect(() => {
     const token = localStorage.getItem('hrm_token');
@@ -68,27 +70,30 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('hrm_active_profile');
     delete api.defaults.headers.common['Authorization'];
     setUser(null);
+    setSharedAccount(null);
     toast.success('Logged out successfully');
   };
 
   const updateUser = (updatedUser) => setUser(updatedUser);
 
-  // Persist active profile to backend + localStorage
-  const setActiveProfile = async (profileId) => {
-    try {
-      const { data } = await api.put('/auth/active-profile', { profileId });
-      setUser(data.user);
-      localStorage.setItem('hrm_active_profile', profileId);
-    } catch (err) {
-      console.error('Failed to persist active profile', err);
-    }
+  // Enter a shared account context — all data operations use this owner's ID
+  const enterSharedAccount = (owner, accessType) => {
+    setSharedAccount({ ...owner, accessType });
   };
+
+  // Exit shared account context — return to personal account
+  const exitSharedAccount = () => {
+    setSharedAccount(null);
+  };
+
+  // The active owner ID to use for all data fetches
+  const activeOwnerId = sharedAccount ? sharedAccount._id : user?._id;
 
   return (
     <AuthContext.Provider value={{
-      user, loading,
+      user, loading, sharedAccount, activeOwnerId,
       login, signup, googleLogin, logout,
-      updateUser, fetchMe, setActiveProfile,
+      updateUser, fetchMe, enterSharedAccount, exitSharedAccount,
     }}>
       {children}
     </AuthContext.Provider>

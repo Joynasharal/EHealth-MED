@@ -1,13 +1,27 @@
 const MedicalRecord = require('../models/MedicalRecord');
 const AccessControl = require('../models/AccessControl');
-const { successResponse } = require('../utils/apiResponse');
+const { successResponse, errorResponse } = require('../utils/apiResponse');
 const { getMonthlyVisits } = require('../services/aiSummaryService');
 
 // ─── GET /api/analytics ───────────────────────────────────────────────────────
-// Per-user analytics (all records)
+// Per-user analytics — supports ?ownerUserId= for shared account context
 const getAnalytics = async (req, res, next) => {
   try {
-    const records = await MedicalRecord.find({ ownerUserId: req.user._id, isDeleted: false }).sort({ visitDate: -1 });
+    const requestedOwner = req.query.ownerUserId;
+    let targetOwner = req.user._id;
+
+    if (requestedOwner && requestedOwner !== req.user._id.toString()) {
+      const access = await AccessControl.findOne({
+        ownerUserId: requestedOwner,
+        $or: [{ targetEmail: req.user.email }, { targetUserId: req.user._id }],
+        status: 'active',
+        expiryDate: { $gt: new Date() },
+      });
+      if (!access) return successResponse(res, 403, 'Access denied');
+      targetOwner = requestedOwner;
+    }
+
+    const records = await MedicalRecord.find({ ownerUserId: targetOwner, isDeleted: false }).sort({ visitDate: -1 });
 
     if (!records.length) {
       return successResponse(res, 200, 'No records found', {
