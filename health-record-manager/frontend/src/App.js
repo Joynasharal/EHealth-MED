@@ -14,7 +14,6 @@ import Dashboard from './pages/Dashboard';
 import UploadRecord from './pages/UploadRecord';
 import MedicalHistory from './pages/MedicalHistory';
 import RecordDetails from './pages/RecordDetails';
-import FamilyProfiles from './pages/FamilyProfiles';
 import HealthInsights from './pages/HealthInsights';
 import ShareAccess from './pages/ShareAccess';
 import DoctorDashboard from './pages/DoctorDashboard';
@@ -51,7 +50,6 @@ function AppRoutes() {
         <Route path="upload" element={<UploadRecord />} />
         <Route path="history" element={<MedicalHistory />} />
         <Route path="history/:id" element={<RecordDetails />} />
-        <Route path="profiles" element={<FamilyProfiles />} />
         <Route path="insights" element={<HealthInsights />} />
         <Route path="share" element={<ShareAccess />} />
         <Route path="doctor" element={<DoctorDashboard />} />

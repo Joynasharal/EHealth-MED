@@ -498,19 +498,13 @@ const ReceivedTab = ({ list, navigate }) => {
             </div>
 
             <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-              {hasManage ? (
-                <button
-                  className="btn btn-primary btn-sm"
-                  onClick={() => navigate(`/managed-account/${owner?._id}`)}>
-                  <Settings size={13} /> Manage Account
-                </button>
-              ) : (
-                <button
-                  className="btn btn-secondary btn-sm"
-                  onClick={() => navigate('/doctor')}>
-                  <Eye size={13} /> View Records
-                </button>
-              )}
+              <button
+                className={`btn btn-sm ${hasManage ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => navigate(`/managed-account/${owner?._id}`)}>
+                {hasManage
+                  ? <><Settings size={13} /> Manage Account</>
+                  : <><Eye size={13} /> View Records</>}
+              </button>
             </div>
           </div>
         );

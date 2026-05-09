@@ -57,7 +57,7 @@ const LabStatus = ({ status }) => {
 };
 
 // ─── Record card ──────────────────────────────────────────────────────────────
-const RecordCard = ({ record, onDelete, onNavigate }) => {
+const RecordCard = ({ record, onDelete, onNavigate, canManage }) => {
   const cfg = TYPE_CONFIG[record.recordType] || TYPE_CONFIG.Other;
   const Icon = cfg.icon;
   const color = cfg.color;
@@ -116,9 +116,11 @@ const RecordCard = ({ record, onDelete, onNavigate }) => {
         )}
       </div>
       <div className="managed-record__actions" onClick={(e) => e.stopPropagation()}>
-        <button className="btn btn-danger btn-sm" onClick={handleDelete} disabled={deleting}>
-          {deleting ? <RefreshCw size={12} className="spin-icon" /> : <Trash2 size={12} />}
-        </button>
+        {canManage && (
+          <button className="btn btn-danger btn-sm" onClick={handleDelete} disabled={deleting}>
+            {deleting ? <RefreshCw size={12} className="spin-icon" /> : <Trash2 size={12} />}
+          </button>
+        )}
         <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
       </div>
     </div>
@@ -172,8 +174,17 @@ const ManagedAccount = () => {
   if (!data) return null;
 
   const { owner, profiles, recordsByProfile, accessType, expiryDate } = data;
+  const canUpload = accessType === 'upload' || accessType === 'manage';
+  const canManage = accessType === 'manage';
   const selectedProfile = profiles.find((p) => p._id === selectedProfileId);
   const selectedRecords = selectedProfileId ? (recordsByProfile[selectedProfileId] || []) : [];
+
+  // Access badge config
+  const accessBadge = {
+    view:   { cls: 'badge-blue',   icon: Shield,   label: 'View Only' },
+    upload: { cls: 'badge-purple', icon: Upload,   label: 'View + Upload' },
+    manage: { cls: 'badge-red',    icon: Settings, label: 'Full Manage' },
+  }[accessType] || { cls: 'badge-gray', icon: Shield, label: accessType };
 
   return (
     <div className="managed-account fade-in">
@@ -188,8 +199,8 @@ const ManagedAccount = () => {
             <span className="managed-account__owner-name">{owner.fullName}</span>
             <span className="managed-account__owner-email">{owner.email}</span>
           </div>
-          <span className="badge badge-red" style={{ marginLeft: 8 }}>
-            <Settings size={11} /> Managing Account
+          <span className={`badge ${accessBadge.cls}`} style={{ marginLeft: 8 }}>
+            <accessBadge.icon size={11} /> {accessBadge.label}
           </span>
         </div>
         <div className="managed-account__expiry">
@@ -265,11 +276,13 @@ const ManagedAccount = () => {
                   )}
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    onClick={() => navigate(`/upload?profileId=${selectedProfile._id}&managedOwner=${ownerUserId}`)}>
-                    <Upload size={13} /> Upload Record
-                  </button>
+                  {canUpload && (
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => navigate(`/upload?profileId=${selectedProfile._id}&managedOwner=${ownerUserId}`)}>
+                      <Upload size={13} /> Upload Record
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -283,13 +296,15 @@ const ManagedAccount = () => {
                 <div className="empty-state card" style={{ padding: '40px 20px' }}>
                   <FileText size={36} />
                   <h3>No records yet</h3>
-                  <p>Upload the first medical record for this profile</p>
-                  <button
-                    className="btn btn-primary"
-                    style={{ marginTop: 16 }}
-                    onClick={() => navigate(`/upload?profileId=${selectedProfile._id}&managedOwner=${ownerUserId}`)}>
-                    <Upload size={14} /> Upload Record
-                  </button>
+                  <p>{canUpload ? 'Upload the first medical record for this profile' : 'No records have been added yet'}</p>
+                  {canUpload && (
+                    <button
+                      className="btn btn-primary"
+                      style={{ marginTop: 16 }}
+                      onClick={() => navigate(`/upload?profileId=${selectedProfile._id}&managedOwner=${ownerUserId}`)}>
+                      <Upload size={14} /> Upload Record
+                    </button>
+                  )}
                 </div>
               ) : (
                 <div className="managed-records-list">
@@ -297,6 +312,7 @@ const ManagedAccount = () => {
                     <RecordCard
                       key={record._id}
                       record={record}
+                      canManage={canManage}
                       onDelete={handleRecordDeleted}
                       onNavigate={(id) => navigate(`/history/${id}`)}
                     />

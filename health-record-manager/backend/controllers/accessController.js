@@ -204,25 +204,24 @@ const getSharedProfileRecords = async (req, res, next) => {
 };
 
 // ─── GET /api/access/managed-account/:ownerUserId ────────────────────────────
-// For manage access: get all profiles + records of the owner account
+// Get all profiles + records of the owner account (any access type)
 const getManagedAccount = async (req, res, next) => {
   try {
     const { ownerUserId } = req.params;
 
-    // Verify the logged-in user has at least one active manage grant from this owner
+    // Verify the logged-in user has any active grant from this owner
     const access = await AccessControl.findOne({
       ownerUserId,
       $or: [
         { targetEmail: req.user.email },
         { targetUserId: req.user._id },
       ],
-      accessType: 'manage',
       status: 'active',
       expiryDate: { $gt: new Date() },
     });
 
     if (!access) {
-      return errorResponse(res, 403, 'Manage access denied or expired');
+      return errorResponse(res, 403, 'Access denied or expired');
     }
 
     // Get the owner's user info
@@ -247,7 +246,7 @@ const getManagedAccount = async (req, res, next) => {
       recordsByProfile[key].push(r);
     });
 
-    return successResponse(res, 200, 'Managed account data fetched', {
+    return successResponse(res, 200, 'Account data fetched', {
       owner,
       profiles,
       recordsByProfile,

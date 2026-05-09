@@ -1,8 +1,8 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Upload, ClipboardList, Users, BarChart2,
-  Share2, Settings, LogOut, Heart, Stethoscope, X
+  LayoutDashboard, Upload, ClipboardList, BarChart2,
+  Share2, Settings, LogOut, Heart, X
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import './Sidebar.css';
@@ -11,10 +11,8 @@ const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/upload', icon: Upload, label: 'Upload Record' },
   { to: '/history', icon: ClipboardList, label: 'Medical History' },
-  { to: '/profiles', icon: Users, label: 'Family Profiles' },
   { to: '/insights', icon: BarChart2, label: 'Health Insights' },
   { to: '/share', icon: Share2, label: 'Share Access' },
-  { to: '/doctor', icon: Stethoscope, label: 'Doctor View' },
 ];
 
 const Sidebar = ({ isOpen, onClose }) => {
