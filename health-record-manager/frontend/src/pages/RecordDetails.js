@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Download, Share2, Edit2, Trash2, FileText,
   User, Building2, Calendar, Pill, Sparkles,
-  Save, X, CheckCircle, AlertCircle, Plus,
+  Save, X, CheckCircle, AlertCircle,
   FlaskConical, Scan, ClipboardList, Receipt, Activity,
   Heart, TrendingUp, TrendingDown, RefreshCw
 } from 'lucide-react';
@@ -262,7 +262,7 @@ const RecordDetails = () => {
   const [downloading, setDownloading] = useState(false);
   const [editForm, setEditForm] = useState({});
 
-  useEffect(() => { fetchRecord(); }, [id]);
+  useEffect(() => { fetchRecord(); }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchRecord = async () => {
     try {

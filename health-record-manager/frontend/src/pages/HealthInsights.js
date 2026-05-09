@@ -3,7 +3,7 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, Activity, Sparkles, Brain, User, Stethoscope } from 'lucide-react';
+import { TrendingUp, Activity, Sparkles, Brain, AlertCircle, User, Stethoscope } from 'lucide-react';
 import { useProfile } from '../context/ProfileContext';
 import api from '../services/api';
 import './HealthInsights.css';

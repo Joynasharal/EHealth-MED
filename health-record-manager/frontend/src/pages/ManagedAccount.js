@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, User, FileText, Calendar, Building2, Pill,
   FlaskConical, Scan, ClipboardList, Receipt, Syringe,
-  Upload, Edit2, Trash2, Clock, Shield, Settings,
+  Upload, Trash2, Clock, Shield, Settings,
   AlertCircle, ChevronRight, Activity, TrendingUp, TrendingDown,
   CheckCircle, RefreshCw
 } from 'lucide-react';
@@ -141,7 +141,6 @@ const ManagedAccount = () => {
     try {
       const { data: res } = await api.get(`/access/managed-account/${ownerUserId}`);
       setData(res);
-      // Auto-select first profile
       if (res.profiles?.length > 0 && !selectedProfileId) {
         setSelectedProfileId(res.profiles[0]._id);
       }
@@ -151,6 +150,7 @@ const ManagedAccount = () => {
     } finally {
       setLoading(false);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ownerUserId]);
 
   useEffect(() => { fetchData(); }, [fetchData]);

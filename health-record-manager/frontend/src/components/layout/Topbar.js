@@ -1,16 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Bell, Sun, Moon, Menu, ChevronDown, Plus, Check } from 'lucide-react';
+import { Search, Bell, Sun, Moon, Menu, ChevronDown, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
-import { useProfile } from '../../context/ProfileContext';
 import './Topbar.css';
 
 const Topbar = ({ onMenuClick }) => {
   const { user, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
-  const { profiles, activeProfile, switchProfile } = useProfile();
-  const [profileDropdown, setProfileDropdown] = useState(false);
+  const [userDropdown, setUserDropdown] = useState(false);
   const [search, setSearch] = useState('');
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
@@ -18,7 +16,7 @@ const Topbar = ({ onMenuClick }) => {
   useEffect(() => {
     const handler = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
-        setProfileDropdown(false);
+        setUserDropdown(false);
       }
     };
     document.addEventListener('mousedown', handler);
@@ -30,8 +28,12 @@ const Topbar = ({ onMenuClick }) => {
 
   const getAvatarColor = (name) => {
     const colors = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
-    const idx = name ? name.charCodeAt(0) % colors.length : 0;
-    return colors[idx];
+    return colors[name ? name.charCodeAt(0) % colors.length : 0];
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -64,60 +66,47 @@ const Topbar = ({ onMenuClick }) => {
           <span className="topbar__notif-dot" />
         </button>
 
-        {/* Profile switcher */}
+        {/* User menu */}
         <div className="topbar__profile-switcher" ref={dropdownRef}>
           <button
             className="topbar__profile-btn"
-            onClick={() => setProfileDropdown(!profileDropdown)}
+            onClick={() => setUserDropdown(!userDropdown)}
           >
             <div
               className="topbar__avatar"
-              style={{ background: getAvatarColor(activeProfile?.profileName || user?.fullName) }}
+              style={{ background: getAvatarColor(user?.fullName) }}
             >
-              {getInitials(activeProfile?.profileName || user?.fullName)}
+              {user?.profilePhoto
+                ? <img src={user.profilePhoto} alt={user.fullName} style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                : getInitials(user?.fullName)}
             </div>
             <div className="topbar__profile-info">
-              <span className="topbar__profile-name">
-                {activeProfile?.profileName || user?.fullName}
-              </span>
-              <span className="topbar__profile-role">
-                {activeProfile?.relationship || user?.role}
-              </span>
+              <span className="topbar__profile-name">{user?.fullName}</span>
+              <span className="topbar__profile-role">{user?.role}</span>
             </div>
-            <ChevronDown size={14} className={`topbar__chevron ${profileDropdown ? 'topbar__chevron--open' : ''}`} />
+            <ChevronDown size={14} className={`topbar__chevron ${userDropdown ? 'topbar__chevron--open' : ''}`} />
           </button>
 
-          {profileDropdown && (
+          {userDropdown && (
             <div className="topbar__dropdown">
-              <p className="topbar__dropdown-label">Switch Profile</p>
-              {profiles.map((profile) => (
-                <button
-                  key={profile._id}
-                  className={`topbar__dropdown-item ${activeProfile?._id === profile._id ? 'topbar__dropdown-item--active' : ''}`}
-                  onClick={() => { switchProfile(profile); setProfileDropdown(false); }}
-                >
-                  <div
-                    className="topbar__dropdown-avatar"
-                    style={{ background: getAvatarColor(profile.profileName) }}
-                  >
-                    {getInitials(profile.profileName)}
-                  </div>
-                  <div>
-                    <p className="topbar__dropdown-name">{profile.profileName}</p>
-                    <p className="topbar__dropdown-rel">{profile.relationship}</p>
-                  </div>
-                  {activeProfile?._id === profile._id && <Check size={14} className="topbar__dropdown-check" />}
-                </button>
-              ))}
+              <div className="topbar__dropdown-user">
+                <p className="topbar__dropdown-name">{user?.fullName}</p>
+                <p className="topbar__dropdown-rel">{user?.email}</p>
+              </div>
               <div className="topbar__dropdown-divider" />
               <button
-                className="topbar__dropdown-item topbar__dropdown-add"
-                onClick={() => { navigate('/profiles'); setProfileDropdown(false); }}
+                className="topbar__dropdown-item"
+                onClick={() => { navigate('/settings'); setUserDropdown(false); }}
               >
-                <div className="topbar__dropdown-avatar topbar__dropdown-avatar--add">
-                  <Plus size={14} />
-                </div>
-                <span>Add Profile</span>
+                <Settings size={15} />
+                <span>Settings</span>
+              </button>
+              <button
+                className="topbar__dropdown-item topbar__dropdown-item--danger"
+                onClick={handleLogout}
+              >
+                <LogOut size={15} />
+                <span>Logout</span>
               </button>
             </div>
           )}

@@ -23,8 +23,6 @@ const DOC_TYPES = [
   { id: 'Other',             label: 'Other',              icon: FileText,      color: '#64748b' },
 ];
 
-const TYPE_COLOR = Object.fromEntries(DOC_TYPES.map((t) => [t.id, t.color]));
-
 // ─── Confidence badge ─────────────────────────────────────────────────────────
 const ConfidenceBadge = ({ confidence }) => {
   const map = { high: ['badge-green', 'High Confidence'], low: ['badge-yellow', 'Low Confidence'], none: ['badge-red', 'No Text Found'] };
@@ -41,12 +39,6 @@ const DetectedTypeBadge = ({ type }) => {
       <Icon size={12} /> AI detected: {cfg.label}
     </span>
   );
-};
-
-// ─── Status badge for lab results ────────────────────────────────────────────
-const StatusBadge = ({ status }) => {
-  const map = { high: 'badge-red', low: 'badge-yellow', normal: 'badge-green', positive: 'badge-red', negative: 'badge-green', borderline: 'badge-yellow' };
-  return <span className={`badge ${map[status] || 'badge-gray'}`}>{status}</span>;
 };
 
 // ─── Extracted preview field ──────────────────────────────────────────────────

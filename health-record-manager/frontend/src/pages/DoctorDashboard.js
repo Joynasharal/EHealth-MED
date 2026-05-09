@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Stethoscope, User, Calendar, FileText, ChevronRight,
   Brain, Clock, Upload, Shield, Activity, Pill,
-  Building2, AlertCircle, Eye, TrendingUp
+  Building2, AlertCircle, Eye
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';

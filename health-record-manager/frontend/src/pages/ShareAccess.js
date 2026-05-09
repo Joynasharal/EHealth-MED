@@ -5,7 +5,6 @@ import {
   CheckCircle, XCircle, AlertCircle, User, RefreshCw,
   Eye, Upload, Settings, Loader
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { format, isPast, formatDistanceToNow } from 'date-fns';
@@ -218,7 +217,6 @@ const ShareForm = ({ onSuccess, onCancel }) => {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 const ShareAccess = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('granted');
   const [grantedList, setGrantedList] = useState([]);
