@@ -21,7 +21,7 @@ const accessControlSchema = new mongoose.Schema(
     profileId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'FamilyProfile',
-      required: true,
+      default: null, // null = account-level access (all profiles)
     },
     accessType: {
       type: String,

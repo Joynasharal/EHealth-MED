@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import {
   Share2, Mail, Clock, Shield, Trash2, Plus,
   CheckCircle, XCircle, AlertCircle, User, RefreshCw,
-  Eye, Upload, Settings, Search, Loader
+  Eye, Upload, Settings, Loader
 } from 'lucide-react';
-import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -45,9 +44,9 @@ const Avatar = ({ name, photo, size = 40 }) => {
 };
 
 // ─── Share form ───────────────────────────────────────────────────────────────
-const ShareForm = ({ profiles, onSuccess, onCancel }) => {
+const ShareForm = ({ onSuccess, onCancel }) => {
   const [form, setForm] = useState({
-    targetEmail: '', profileId: '', accessType: 'view', expiryDays: '7', customExpiry: '',
+    targetEmail: '', accessType: 'view', expiryDays: '7', customExpiry: '',
   });
   const [saving, setSaving] = useState(false);
   const [lookupState, setLookupState] = useState(null); // null | 'loading' | { found, user }
@@ -72,15 +71,14 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!form.profileId) { toast.error('Please select a profile'); return; }
-    if (form.accessType === 'manage' && (!lookupState || !lookupState.found)) {
-      toast.error('User must have an account to receive manage access');
+    if (!lookupState || lookupState === 'loading' || !lookupState.found) {
+      toast.error('Please enter a valid email of a registered user');
       return;
     }
     setSaving(true);
     try {
       await api.post('/access/share', form);
-      toast.success('Access shared successfully');
+      toast.success(`Access shared with ${lookupState.user.fullName}`);
       onSuccess();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to share access');
@@ -108,7 +106,7 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
       id: 'manage',
       icon: Settings,
       title: 'Full Manage',
-      desc: 'Can view, upload, edit and delete records. User must have an account.',
+      desc: 'Can view, upload, edit and delete records',
       color: '#dc2626',
     },
   ];
@@ -118,57 +116,47 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
       <div className="share-form__header">
         <div className="share-form__header-icon"><Share2 size={18} /></div>
         <div>
-          <h3>New Access Grant</h3>
-          <p>Share a profile with a family member or doctor</p>
+          <h3>Grant Account Access</h3>
+          <p>Share your account with a family member or doctor</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
-        <div className="grid-2">
-          {/* Email with live lookup */}
-          <div className="form-group">
-            <label className="form-label">Recipient Email *</label>
-            <div className="share-input-wrap">
-              <Mail size={15} className="share-input-icon" />
-              <input type="email" className="form-input" style={{ paddingLeft: 38 }}
-                placeholder="family@example.com"
-                value={form.targetEmail}
-                onChange={(e) => handleEmailChange(e.target.value)}
-                required />
-              {lookupState === 'loading' && (
-                <Loader size={14} className="share-input-status spin-icon" />
-              )}
-              {lookupState && lookupState !== 'loading' && lookupState.found && (
-                <CheckCircle size={14} className="share-input-status" style={{ color: '#059669' }} />
-              )}
-              {lookupState && lookupState !== 'loading' && !lookupState.found && (
-                <AlertCircle size={14} className="share-input-status" style={{ color: '#d97706' }} />
-              )}
-            </div>
-            {/* Lookup result */}
-            {lookupState && lookupState !== 'loading' && (
-              <div className={`share-lookup-result ${lookupState.found ? 'share-lookup-result--found' : 'share-lookup-result--notfound'}`}>
-                {lookupState.found ? (
-                  <><CheckCircle size={12} /> Found: <strong>{lookupState.user.fullName}</strong></>
-                ) : (
-                  <><AlertCircle size={12} /> No account found with this email. View/Upload access can still be granted.</>
-                )}
-              </div>
+        {/* Email with live lookup */}
+        <div className="form-group">
+          <label className="form-label">Recipient's Gmail *</label>
+          <div className="share-input-wrap">
+            <Mail size={15} className="share-input-icon" />
+            <input type="email" className="form-input" style={{ paddingLeft: 38 }}
+              placeholder="family@gmail.com"
+              value={form.targetEmail}
+              onChange={(e) => handleEmailChange(e.target.value)}
+              required />
+            {lookupState === 'loading' && (
+              <Loader size={14} className="share-input-status spin-icon" />
+            )}
+            {lookupState && lookupState !== 'loading' && lookupState.found && (
+              <CheckCircle size={14} className="share-input-status" style={{ color: '#059669' }} />
+            )}
+            {lookupState && lookupState !== 'loading' && !lookupState.found && (
+              <AlertCircle size={14} className="share-input-status" style={{ color: '#dc2626' }} />
             )}
           </div>
-
-          <div className="form-group">
-            <label className="form-label">Profile to Share *</label>
-            <select className="form-input" value={form.profileId}
-              onChange={(e) => setForm({ ...form, profileId: e.target.value })} required>
-              <option value="">Select profile...</option>
-              {profiles.map((p) => (
-                <option key={p._id} value={p._id}>
-                  {p.profileName}{p.actualName ? ` (${p.actualName})` : ''} · {p.relationship}
-                </option>
-              ))}
-            </select>
-          </div>
+          {/* Lookup result */}
+          {lookupState && lookupState !== 'loading' && (
+            <div className={`share-lookup-result ${lookupState.found ? 'share-lookup-result--found' : 'share-lookup-result--notfound'}`}>
+              {lookupState.found ? (
+                <>
+                  <CheckCircle size={12} />
+                  <Avatar name={lookupState.user.fullName} photo={lookupState.user.profilePhoto} size={22} />
+                  <strong>{lookupState.user.fullName}</strong>
+                  <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>{lookupState.user.email}</span>
+                </>
+              ) : (
+                <><AlertCircle size={12} /> No account found. The person must sign up first.</>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Access type */}
@@ -188,11 +176,6 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
               </button>
             ))}
           </div>
-          {form.accessType === 'manage' && lookupState && !lookupState.found && (
-            <p style={{ fontSize: 12, color: '#dc2626', marginTop: 6 }}>
-              ⚠ Manage access requires the recipient to have an account.
-            </p>
-          )}
         </div>
 
         {/* Expiry */}
@@ -223,7 +206,8 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
 
         <div className="share-form__actions">
           <button type="button" className="btn btn-ghost" onClick={onCancel}>Cancel</button>
-          <button type="submit" className="btn btn-primary" disabled={saving}>
+          <button type="submit" className="btn btn-primary"
+            disabled={saving || !lookupState || lookupState === 'loading' || !lookupState?.found}>
             {saving ? 'Sharing...' : <><Share2 size={15} /> Share Access</>}
           </button>
         </div>
@@ -234,7 +218,6 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 const ShareAccess = () => {
-  const { profiles } = useProfile();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [tab, setTab] = useState('granted');
@@ -322,15 +305,16 @@ const ShareAccess = () => {
             <Shield size={18} />
           </div>
           <div>
-            <p className="share-stat__label">Total Profiles</p>
-            <p className="share-stat__value">{profiles.length}</p>
+            <p className="share-stat__label">Manage Grants</p>
+            <p className="share-stat__value">
+              {grantedList.filter((a) => a.accessType === 'manage' && a.status === 'active' && !isPast(new Date(a.expiryDate))).length}
+            </p>
           </div>
         </div>
       </div>
 
       {showForm && (
         <ShareForm
-          profiles={profiles}
           onSuccess={() => { setShowForm(false); fetchAll(); }}
           onCancel={() => setShowForm(false)}
         />
@@ -422,11 +406,6 @@ const GrantedTab = ({ list, allList, filterStatus, setFilterStatus, onRevoke, on
                       {access.targetUserId?.fullName || access.targetEmail}
                     </p>
                     <p className="access-card__email">{access.targetEmail}</p>
-                    <p className="access-card__profile">
-                      {access.profileId?.profileName}
-                      {access.profileId?.actualName ? ` · ${access.profileId.actualName}` : ''}
-                      {' · '}{access.profileId?.relationship}
-                    </p>
                   </div>
                 </div>
 

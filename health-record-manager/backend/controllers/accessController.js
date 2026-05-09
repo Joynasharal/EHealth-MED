@@ -42,29 +42,21 @@ const lookupUser = async (req, res, next) => {
 // ─── POST /api/access/share ───────────────────────────────────────────────────
 const shareAccess = async (req, res, next) => {
   try {
-    const { targetEmail, profileId, accessType, expiryDays, customExpiry } = req.body;
+    const { targetEmail, accessType, expiryDays, customExpiry } = req.body;
 
-    if (!targetEmail || !profileId) {
-      return errorResponse(res, 400, 'Target email and profile are required');
+    if (!targetEmail) {
+      return errorResponse(res, 400, 'Target email is required');
     }
-
-    // Verify profile ownership
-    const profile = await FamilyProfile.findOne({
-      _id: profileId,
-      ownerUserId: req.user._id,
-      isActive: true,
-    });
-    if (!profile) return errorResponse(res, 404, 'Profile not found or access denied');
 
     // Cannot share with yourself
     if (targetEmail.toLowerCase() === req.user.email.toLowerCase()) {
       return errorResponse(res, 400, 'Cannot share access with yourself');
     }
 
-    // For manage access, the target user MUST exist in the DB
+    // Target user MUST exist in the DB
     const targetUser = await User.findOne({ email: targetEmail.toLowerCase() });
-    if (accessType === 'manage' && !targetUser) {
-      return errorResponse(res, 404, 'User not found. The person must have an account to receive manage access.');
+    if (!targetUser) {
+      return errorResponse(res, 404, 'No account found with this email. The person must sign up first.');
     }
 
     // Calculate expiry date
@@ -81,11 +73,11 @@ const shareAccess = async (req, res, next) => {
       return errorResponse(res, 400, 'Expiry date must be in the future');
     }
 
-    // Upsert: update existing active grant or create new one
+    // Upsert: update existing active grant or create new one (account-level, no profileId)
     const existing = await AccessControl.findOne({
       ownerUserId: req.user._id,
-      targetEmail: targetEmail.toLowerCase(),
-      profileId,
+      targetUserId: targetUser._id,
+      profileId: null,
       status: 'active',
     });
 
@@ -93,15 +85,15 @@ const shareAccess = async (req, res, next) => {
     if (existing) {
       existing.accessType = accessType || 'view';
       existing.expiryDate = expiryDate;
-      existing.targetUserId = targetUser?._id || null;
+      existing.targetEmail = targetEmail.toLowerCase();
       await existing.save();
       access = existing;
     } else {
       access = await AccessControl.create({
         ownerUserId: req.user._id,
         targetEmail: targetEmail.toLowerCase(),
-        targetUserId: targetUser?._id || null,
-        profileId,
+        targetUserId: targetUser._id,
+        profileId: null,
         accessType: accessType || 'view',
         expiryDate,
         sharedBy: req.user.fullName,
@@ -110,7 +102,6 @@ const shareAccess = async (req, res, next) => {
     }
 
     const populated = await AccessControl.findById(access._id)
-      .populate('profileId', 'profileName relationship actualName')
       .populate('targetUserId', 'fullName email profilePhoto');
 
     return successResponse(res, existing ? 200 : 201,
@@ -141,14 +132,12 @@ const revokeAccess = async (req, res, next) => {
 const getGrantedAccess = async (req, res, next) => {
   try {
     const accessList = await AccessControl.find({ ownerUserId: req.user._id })
-      .populate('profileId', 'profileName relationship actualName')
       .populate('targetUserId', 'fullName email profilePhoto role')
       .sort({ createdAt: -1 });
 
     await autoExpire(accessList);
 
     const fresh = await AccessControl.find({ ownerUserId: req.user._id })
-      .populate('profileId', 'profileName relationship actualName')
       .populate('targetUserId', 'fullName email profilePhoto role')
       .sort({ createdAt: -1 });
 
@@ -169,7 +158,6 @@ const getSharedWithMe = async (req, res, next) => {
       status: 'active',
       expiryDate: { $gt: new Date() },
     })
-      .populate('profileId', 'profileName actualName age gender bloodGroup relationship allergies chronicConditions')
       .populate('ownerUserId', 'fullName email profilePhoto')
       .sort({ createdAt: -1 });
 
