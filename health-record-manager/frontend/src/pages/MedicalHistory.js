@@ -205,7 +205,7 @@ const MedicalHistory = () => {
       <div className="page-header">
         <div>
           <h1>Medical History</h1>
-          <p>{activeProfile ? `Records for ${activeProfile.profileName}` : 'Select a profile to view records'}</p>
+          <p>Your medical records</p>
         </div>
         <button className="btn btn-primary" onClick={() => navigate('/upload')}>
           <Upload size={15} /> Upload Record
@@ -293,7 +293,7 @@ const MedicalHistory = () => {
           <div className="empty-state card" style={{ padding: '60px 20px' }}>
             <FileText size={48} />
             <h3>No records found</h3>
-            <p>{activeProfile ? 'Upload your first medical record to get started' : 'Please select a profile first'}</p>
+            <p>Upload your first medical record to get started</p>
             {activeProfile && (
               <button className="btn btn-primary" style={{ marginTop: 20 }} onClick={() => navigate('/upload')}>
                 <Upload size={15} /> Upload Record

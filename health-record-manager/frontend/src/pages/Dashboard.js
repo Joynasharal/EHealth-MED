@@ -1,12 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Upload, ClipboardList, Share2, UserPlus, FileText,
-  TrendingUp, Users, Activity, Calendar, ArrowRight, Sparkles,
+  Upload, ClipboardList, Share2, FileText,
+  TrendingUp, Activity, ArrowRight, Sparkles,
   Pill, FlaskConical, Scan, ClipboardCheck, Receipt
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useProfile } from '../context/ProfileContext';
 import api from '../services/api';
 import { format } from 'date-fns';
 import './Dashboard.css';
@@ -58,7 +57,6 @@ const getGreeting = () => {
 
 const Dashboard = () => {
   const { user } = useAuth();
-  const { activeProfile, profiles } = useProfile();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -87,11 +85,7 @@ const Dashboard = () => {
           <div className="welcome-banner__text">
             <p className="welcome-banner__greeting">{getGreeting()}</p>
             <h1 className="welcome-banner__name">{firstName}</h1>
-            <p className="welcome-banner__sub">
-              {activeProfile
-                ? `Viewing records for ${activeProfile.profileName} · ${activeProfile.relationship}`
-                : 'Manage your family health records securely'}
-            </p>
+            <p className="welcome-banner__sub">Manage your health records securely</p>
           </div>
           <div className="welcome-banner__badge">
             <Sparkles size={16} />
@@ -108,9 +102,9 @@ const Dashboard = () => {
       {/* Stats */}
       <div className="grid-4" style={{ marginBottom: 28 }}>
         <StatCard icon={FileText} label="Total Records" value={loading ? '...' : stats?.totalRecords ?? 0} color="#2563eb" trend="All time" />
-        <StatCard icon={Users} label="Family Profiles" value={loading ? '...' : profiles.length} color="#7c3aed" trend="Active" />
         <StatCard icon={Activity} label="This Month" value={loading ? '...' : stats?.recordsThisMonth ?? 0} color="#059669" trend="New uploads" />
         <StatCard icon={TrendingUp} label="AI Processed" value={loading ? '...' : stats?.totalRecords ?? 0} color="#f59e0b" trend="OCR scanned" />
+        <StatCard icon={Share2} label="Shared Access" value={loading ? '...' : stats?.sharedCount ?? 0} color="#7c3aed" trend="Active grants" />
       </div>
 
       <div className="dashboard__grid">
@@ -123,7 +117,7 @@ const Dashboard = () => {
             <QuickAction icon={Upload} label="Upload Record" desc="Add prescription or report" color="#2563eb" onClick={() => navigate('/upload')} />
             <QuickAction icon={ClipboardList} label="Medical History" desc="Browse all records" color="#7c3aed" onClick={() => navigate('/history')} />
             <QuickAction icon={Share2} label="Share Access" desc="Grant doctor access" color="#059669" onClick={() => navigate('/share')} />
-            <QuickAction icon={UserPlus} label="Add Profile" desc="Manage family members" color="#f59e0b" onClick={() => navigate('/profiles')} />
+            <QuickAction icon={TrendingUp} label="Health Insights" desc="View analytics & AI summary" color="#f59e0b" onClick={() => navigate('/insights')} />
           </div>
         </div>
 
@@ -145,13 +139,12 @@ const Dashboard = () => {
                 const color = TYPE_COLORS[record.recordType] || '#64748b';
                 const Icon = TYPE_ICONS[record.recordType] || FileText;
 
-                // Build structured title per type
                 const getTitle = () => {
                   switch (record.recordType) {
                     case 'Lab Report':
-                      return record.labTests?.[0]?.testName
+                      return record.diagnosis || (record.labTests?.[0]?.testName
                         ? `${record.labTests[0].testName}${record.labTests.length > 1 ? ` +${record.labTests.length - 1}` : ''}`
-                        : record.impression || 'Lab Report';
+                        : 'Lab Report');
                     case 'Scan': return record.scanType || 'Scan Report';
                     case 'Discharge Summary': return record.diagnosis || 'Discharge Summary';
                     case 'Medical Bill': return record.billNumber ? `Bill #${record.billNumber}` : 'Medical Bill';
@@ -159,14 +152,12 @@ const Dashboard = () => {
                   }
                 };
 
-                // Build structured subtitle per type
                 const getSubtitle = () => {
                   const parts = [];
                   if (record.doctorName) parts.push(`Dr. ${record.doctorName}`);
                   else if (record.labName) parts.push(record.labName);
                   else if (record.hospitalName) parts.push(record.hospitalName);
                   if (record.visitDate) parts.push(format(new Date(record.visitDate), 'MMM d, yyyy'));
-                  else if (record.admissionDate) parts.push(`Admitted: ${record.admissionDate}`);
                   return parts.join(' · ');
                 };
 
@@ -180,14 +171,9 @@ const Dashboard = () => {
                       <p className="recent-record__title">{getTitle()}</p>
                       <p className="recent-record__meta">{getSubtitle()}</p>
                     </div>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                      <span className="badge" style={{ background: color + '18', color, fontSize: 10 }}>
-                        {record.recordType}
-                      </span>
-                      <span className="badge badge-blue" style={{ fontSize: 10 }}>
-                        {record.profileId?.relationship || 'Self'}
-                      </span>
-                    </div>
+                    <span className="badge" style={{ background: color + '18', color, fontSize: 10 }}>
+                      {record.recordType}
+                    </span>
                   </div>
                 );
               })
@@ -199,36 +185,6 @@ const Dashboard = () => {
                 <button className="btn btn-primary btn-sm" style={{ marginTop: 16 }} onClick={() => navigate('/upload')}>
                   Upload Now
                 </button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Profile Summary */}
-        <div className="dashboard__section">
-          <div className="section-header">
-            <h2 className="section-title">Family Profiles</h2>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate('/profiles')}>
-              Manage <ArrowRight size={14} />
-            </button>
-          </div>
-          <div className="profile-cards">
-            {profiles.length > 0 ? profiles.map((profile) => (
-              <div key={profile._id} className={`profile-mini card ${activeProfile?._id === profile._id ? 'profile-mini--active' : ''}`}>
-                <div className="profile-mini__avatar" style={{ background: getAvatarColor(profile.profileName) }}>
-                  {profile.profileName[0].toUpperCase()}
-                </div>
-                <div className="profile-mini__info">
-                  <p className="profile-mini__name">{profile.profileName}</p>
-                  <p className="profile-mini__meta">{profile.age}y · {profile.bloodGroup} · {profile.relationship}</p>
-                </div>
-                {activeProfile?._id === profile._id && <span className="badge badge-blue">Active</span>}
-              </div>
-            )) : (
-              <div className="empty-state" style={{ padding: '32px 20px' }}>
-                <Users size={36} />
-                <h3>No profiles</h3>
-                <p>Add family members to manage their records</p>
               </div>
             )}
           </div>
@@ -259,11 +215,6 @@ const Dashboard = () => {
       </div>
     </div>
   );
-};
-
-const getAvatarColor = (name) => {
-  const colors = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#dc2626', '#0891b2'];
-  return colors[name?.charCodeAt(0) % colors.length] || '#2563eb';
 };
 
 export default Dashboard;

@@ -3,9 +3,8 @@ import {
   LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
-import { TrendingUp, Activity, Sparkles, Brain, AlertCircle, User, Stethoscope } from 'lucide-react';
+import { TrendingUp, Activity, Sparkles, Brain, User, Stethoscope } from 'lucide-react';
 import { useProfile } from '../context/ProfileContext';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import './HealthInsights.css';
 
@@ -26,12 +25,10 @@ const InsightCard = ({ icon: Icon, title, value, color, sub }) => (
 
 const HealthInsights = () => {
   const { activeProfile } = useProfile();
-  const { user } = useAuth();
   const [analytics, setAnalytics] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [summaryTab, setSummaryTab] = useState('patient'); // 'patient' | 'doctor'
-
+  const [summaryTab, setSummaryTab] = useState('patient');
 
   useEffect(() => {
     if (!activeProfile) { setLoading(false); return; }
@@ -53,15 +50,7 @@ const HealthInsights = () => {
     fetch();
   }, [activeProfile]);
 
-  if (!activeProfile) return (
-    <div className="empty-state card" style={{ padding: '80px 20px', marginTop: 40 }}>
-      <Activity size={48} />
-      <h3>No profile selected</h3>
-      <p>Select a family profile to view health insights</p>
-    </div>
-  );
-
-  if (loading) return (
+  if (!activeProfile || loading) return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: 80 }}>
       <div className="spinner" />
     </div>
@@ -71,7 +60,7 @@ const HealthInsights = () => {
     <div className="insights-page fade-in">
       <div className="page-header">
         <h1>Health Insights</h1>
-        <p>Analytics and AI-powered health summary for {activeProfile.profileName}</p>
+        <p>Analytics and AI-powered health summary</p>
       </div>
 
       {/* Stats row */}

@@ -330,10 +330,10 @@ const emptyForm = (profileId, type = 'Prescription') => ({
 
 // ─── Main UploadRecord component ─────────────────────────────────────────────
 const UploadRecord = () => {
-  const { profiles, activeProfile } = useProfile();
+  const { activeProfile } = useProfile();
   const navigate = useNavigate();
 
-  const [phase, setPhase] = useState('idle'); // idle | extracting | review | saving
+  const [phase, setPhase] = useState('idle');
   const [file, setFile] = useState(null);
   const [filePreview, setFilePreview] = useState(null);
   const [ocrResult, setOcrResult] = useState(null);
@@ -365,7 +365,7 @@ const UploadRecord = () => {
   // ── Phase 1: OCR Extract ────────────────────────────────────────────────────
   const handleExtract = async () => {
     if (!file) { toast.error('Please select a file first'); return; }
-    if (!form.profileId) { toast.error('Please select a profile first'); return; }
+    if (!form.profileId) { toast.error('Profile not found. Please refresh the page.'); return; }
     setPhase('extracting');
     try {
       const fd = new FormData();
@@ -422,7 +422,7 @@ const UploadRecord = () => {
   // ── Phase 2: Save ───────────────────────────────────────────────────────────
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.profileId) { toast.error('Please select a profile'); return; }
+    if (!form.profileId) { toast.error('Profile not found. Please refresh the page.'); return; }
     setPhase('saving');
     try {
       const fd = new FormData();
@@ -489,15 +489,6 @@ const UploadRecord = () => {
         <div className="upload-left">
           <div className="card upload-card">
             <h3 className="upload-card__title"><Upload size={17} /> File Upload</h3>
-
-            {/* Profile */}
-            <div className="form-group">
-              <label className="form-label">Profile *</label>
-              <select className="form-input" value={form.profileId} onChange={(e) => setForm({ ...form, profileId: e.target.value })}>
-                <option value="">Choose a profile...</option>
-                {profiles.map((p) => <option key={p._id} value={p._id}>{p.profileName}{p.actualName ? ` (${p.actualName})` : ''} · {p.relationship}</option>)}
-              </select>
-            </div>
 
             {/* Document type selector */}
             <div className="form-group">
