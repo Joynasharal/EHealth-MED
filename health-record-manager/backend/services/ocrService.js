@@ -1,7 +1,6 @@
 const vision = require('@google-cloud/vision');
 const Tesseract = require('tesseract.js');
 const pdfParse = require('pdf-parse');
-const sharp = require('sharp');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -10,7 +9,8 @@ const path = require('path');
 let visionClient = null;
 try {
   const credPath = process.env.GOOGLE_APPLICATION_CREDENTIALS;
-  if (credPath && fs.existsSync(credPath) && fs.statSync(credPath).size > 10) {
+  const fs2 = require('fs');
+  if (credPath && fs2.existsSync(credPath) && fs2.statSync(credPath).size > 10) {
     visionClient = new vision.ImageAnnotatorClient();
     console.log('✅ Google Vision OCR ready');
   } else {
@@ -31,123 +31,31 @@ const withTempFile = async (buffer, ext, fn) => {
   }
 };
 
-// ─── Image preprocessing — improves OCR accuracy significantly ───────────────
-/**
- * Preprocess an image buffer before OCR:
- *  1. Convert to grayscale (removes color noise)
- *  2. Resize to 300 DPI equivalent (min 1500px wide) — Tesseract needs high res
- *  3. Normalize contrast (handles faded/overexposed docs)
- *  4. Sharpen (makes text edges crisp)
- *  5. Threshold/binarize (pure black & white — eliminates background noise)
- *
- * Returns a preprocessed PNG buffer.
- */
-const preprocessImage = async (buffer) => {
-  try {
-    const image = sharp(buffer);
-    const meta = await image.metadata();
-
-    // Target width: at least 2000px for good OCR resolution
-    // If image is already large enough, don't upscale (avoid blur)
-    const targetWidth = Math.max(meta.width || 0, 2000);
-    const scale = targetWidth / (meta.width || targetWidth);
-
-    let pipeline = sharp(buffer)
-      .rotate() // auto-rotate based on EXIF orientation
-      .grayscale(); // step 1: grayscale
-
-    // step 2: resize only if image is smaller than target
-    if (scale > 1.05) {
-      pipeline = pipeline.resize({
-        width: targetWidth,
-        kernel: sharp.kernel.lanczos3, // high-quality upscale
-      });
-    }
-
-    pipeline = pipeline
-      .normalize()   // step 3: stretch contrast to full 0-255 range
-      .sharpen({     // step 4: unsharp mask — sharpens text without halos
-        sigma: 1.5,
-        m1: 1.0,
-        m2: 0.5,
-      })
-      .linear(1.2, -20) // step 5a: increase contrast (multiply by 1.2, subtract 20)
-      .threshold(140)   // step 5b: binarize — pixels below 140 → black, above → white
-      .png();           // output as PNG (lossless, better for OCR than JPEG)
-
-    const processed = await pipeline.toBuffer();
-    console.log(`🖼️  Image preprocessed: ${meta.width}×${meta.height} → ${targetWidth}px wide, grayscale+binarized`);
-    return processed;
-  } catch (err) {
-    console.warn('⚠️  Image preprocessing failed, using original:', err.message);
-    return buffer; // fall back to original if preprocessing fails
-  }
-};
-
 // ─── Raw text extraction ──────────────────────────────────────────────────────
 const extractTextFromImageBuffer = async (buffer) => {
-  // Preprocess the image first
-  const processedBuffer = await preprocessImage(buffer);
-
   // Try Google Vision first (accepts buffer directly)
   if (visionClient) {
     try {
-      const [result] = await visionClient.textDetection({ image: { content: processedBuffer } });
+      const [result] = await visionClient.textDetection({ image: { content: buffer } });
       const text = result.fullTextAnnotation?.text || '';
       if (text.trim().length > 0) {
         console.log('✅ Google Vision extracted', text.length, 'chars');
         return text;
       }
-      // If preprocessed image gave no result, try original buffer as fallback
-      console.warn('⚠️  Google Vision returned empty text on preprocessed image, trying original');
-      const [result2] = await visionClient.textDetection({ image: { content: buffer } });
-      const text2 = result2.fullTextAnnotation?.text || '';
-      if (text2.trim().length > 0) {
-        console.log('✅ Google Vision extracted', text2.length, 'chars (original image)');
-        return text2;
-      }
-      console.warn('⚠️  Google Vision returned empty text, falling back to Tesseract');
+      console.warn('⚠️  Google Vision returned empty text, trying Tesseract');
     } catch (err) {
       console.warn('⚠️  Google Vision failed:', err.message, '— falling back to Tesseract');
     }
   }
 
-  // Tesseract — write preprocessed image to temp file
-  return withTempFile(processedBuffer, '.png', async (tmpPath) => {
+  // Tesseract needs a file path — write to temp
+  return withTempFile(buffer, '.jpg', async (tmpPath) => {
     try {
-      console.log('🔄 Running Tesseract OCR on preprocessed image');
+      console.log('🔄 Running Tesseract OCR on temp file');
       const result = await Tesseract.recognize(tmpPath, 'eng', {
-        logger: (m) => {
-          if (m.status === 'recognizing text') {
-            process.stdout.write(`\r🔄 Tesseract: ${Math.round(m.progress * 100)}%`);
-          }
-        },
-        // Tesseract config for better accuracy on medical documents
-        tessedit_pageseg_mode: '6',    // assume uniform block of text
-        tessedit_char_whitelist: '',   // allow all characters
-        preserve_interword_spaces: '1',
+        logger: (m) => { if (m.status === 'recognizing text') process.stdout.write(`\r🔄 Tesseract: ${Math.round(m.progress * 100)}%`); },
       });
       console.log('\n✅ Tesseract extracted', result.data.text.length, 'chars');
-
-      // If Tesseract got very little text, retry with original image
-      if (result.data.text.trim().length < 30) {
-        console.warn('⚠️  Low text from preprocessed image, retrying with original');
-        return withTempFile(buffer, '.jpg', async (origPath) => {
-          const result2 = await Tesseract.recognize(origPath, 'eng', {
-            logger: (m) => {
-              if (m.status === 'recognizing text') {
-                process.stdout.write(`\r🔄 Tesseract (original): ${Math.round(m.progress * 100)}%`);
-              }
-            },
-          });
-          console.log('\n✅ Tesseract (original) extracted', result2.data.text.length, 'chars');
-          // Return whichever gave more text
-          return result2.data.text.length > result.data.text.length
-            ? result2.data.text
-            : result.data.text;
-        });
-      }
-
       return result.data.text;
     } catch (err) {
       console.error('❌ Tesseract failed:', err.message);
