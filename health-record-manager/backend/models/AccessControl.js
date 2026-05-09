@@ -25,7 +25,7 @@ const accessControlSchema = new mongoose.Schema(
     },
     accessType: {
       type: String,
-      enum: ['view', 'upload'],
+      enum: ['view', 'upload', 'manage'],
       default: 'view',
     },
     expiryDate: {

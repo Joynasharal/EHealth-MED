@@ -14,6 +14,31 @@ const autoExpire = async (list) => {
   }));
 };
 
+// ─── GET /api/access/lookup-user ──────────────────────────────────────────────
+// Check if a user with the given email exists in the DB
+const lookupUser = async (req, res, next) => {
+  try {
+    const { email } = req.query;
+    if (!email) return errorResponse(res, 400, 'Email is required');
+
+    if (email.toLowerCase() === req.user.email.toLowerCase()) {
+      return errorResponse(res, 400, 'Cannot share access with yourself');
+    }
+
+    const user = await User.findOne({ email: email.toLowerCase() }).select('fullName email profilePhoto');
+    if (!user) {
+      return successResponse(res, 200, 'User not found', { found: false });
+    }
+
+    return successResponse(res, 200, 'User found', {
+      found: true,
+      user: { _id: user._id, fullName: user.fullName, email: user.email, profilePhoto: user.profilePhoto },
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── POST /api/access/share ───────────────────────────────────────────────────
 const shareAccess = async (req, res, next) => {
   try {
@@ -36,8 +61,11 @@ const shareAccess = async (req, res, next) => {
       return errorResponse(res, 400, 'Cannot share access with yourself');
     }
 
-    // Resolve target user (may not exist yet — share by email still works)
+    // For manage access, the target user MUST exist in the DB
     const targetUser = await User.findOne({ email: targetEmail.toLowerCase() });
+    if (accessType === 'manage' && !targetUser) {
+      return errorResponse(res, 404, 'User not found. The person must have an account to receive manage access.');
+    }
 
     // Calculate expiry date
     let expiryDate;
@@ -110,7 +138,6 @@ const revokeAccess = async (req, res, next) => {
 };
 
 // ─── GET /api/access/granted ──────────────────────────────────────────────────
-// All grants made BY the logged-in user (patient view)
 const getGrantedAccess = async (req, res, next) => {
   try {
     const accessList = await AccessControl.find({ ownerUserId: req.user._id })
@@ -120,7 +147,6 @@ const getGrantedAccess = async (req, res, next) => {
 
     await autoExpire(accessList);
 
-    // Re-fetch after expiry updates
     const fresh = await AccessControl.find({ ownerUserId: req.user._id })
       .populate('profileId', 'profileName relationship actualName')
       .populate('targetUserId', 'fullName email profilePhoto role')
@@ -133,7 +159,6 @@ const getGrantedAccess = async (req, res, next) => {
 };
 
 // ─── GET /api/access/shared-with-me ──────────────────────────────────────────
-// All active grants received BY the logged-in user (doctor/family view)
 const getSharedWithMe = async (req, res, next) => {
   try {
     const accessList = await AccessControl.find({
@@ -155,12 +180,10 @@ const getSharedWithMe = async (req, res, next) => {
 };
 
 // ─── GET /api/access/shared-profile/:profileId ───────────────────────────────
-// Get records for a shared profile (doctor accessing patient records)
 const getSharedProfileRecords = async (req, res, next) => {
   try {
     const { profileId } = req.params;
 
-    // Verify active access
     const access = await AccessControl.findOne({
       $or: [
         { targetEmail: req.user.email },
@@ -192,8 +215,63 @@ const getSharedProfileRecords = async (req, res, next) => {
   }
 };
 
+// ─── GET /api/access/managed-account/:ownerUserId ────────────────────────────
+// For manage access: get all profiles + records of the owner account
+const getManagedAccount = async (req, res, next) => {
+  try {
+    const { ownerUserId } = req.params;
+
+    // Verify the logged-in user has at least one active manage grant from this owner
+    const access = await AccessControl.findOne({
+      ownerUserId,
+      $or: [
+        { targetEmail: req.user.email },
+        { targetUserId: req.user._id },
+      ],
+      accessType: 'manage',
+      status: 'active',
+      expiryDate: { $gt: new Date() },
+    });
+
+    if (!access) {
+      return errorResponse(res, 403, 'Manage access denied or expired');
+    }
+
+    // Get the owner's user info
+    const owner = await User.findById(ownerUserId).select('fullName email profilePhoto');
+    if (!owner) return errorResponse(res, 404, 'Account not found');
+
+    // Get all active profiles of the owner
+    const profiles = await FamilyProfile.find({ ownerUserId, isActive: true });
+
+    // Get all records for all profiles
+    const profileIds = profiles.map((p) => p._id);
+    const records = await MedicalRecord.find({
+      profileId: { $in: profileIds },
+      isDeleted: false,
+    }).sort({ visitDate: -1 });
+
+    // Group records by profileId
+    const recordsByProfile = {};
+    records.forEach((r) => {
+      const key = r.profileId.toString();
+      if (!recordsByProfile[key]) recordsByProfile[key] = [];
+      recordsByProfile[key].push(r);
+    });
+
+    return successResponse(res, 200, 'Managed account data fetched', {
+      owner,
+      profiles,
+      recordsByProfile,
+      accessType: access.accessType,
+      expiryDate: access.expiryDate,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // ─── GET /api/access/check/:profileId ────────────────────────────────────────
-// Check if current user has access to a profile (used by middleware)
 const checkAccess = async (req, res, next) => {
   try {
     const { profileId } = req.params;
@@ -223,10 +301,12 @@ const checkAccess = async (req, res, next) => {
 };
 
 module.exports = {
+  lookupUser,
   shareAccess,
   revokeAccess,
   getGrantedAccess,
   getSharedWithMe,
   getSharedProfileRecords,
+  getManagedAccount,
   checkAccess,
 };

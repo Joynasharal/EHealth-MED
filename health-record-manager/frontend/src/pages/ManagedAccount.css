@@ -1,0 +1,160 @@
+/* ── Page ────────────────────────────────────────────────────────────────────── */
+.managed-account { max-width: 1200px; }
+
+/* ── Header ──────────────────────────────────────────────────────────────────── */
+.managed-account__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+.managed-account__owner-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+}
+.managed-account__owner-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: block;
+}
+.managed-account__owner-email {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: block;
+}
+.managed-account__expiry {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 99px;
+}
+
+/* ── Layout ──────────────────────────────────────────────────────────────────── */
+.managed-account__layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────────── */
+.managed-account__sidebar { padding: 0; overflow: hidden; }
+.managed-account__sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.managed-profile-list { display: flex; flex-direction: column; }
+.managed-profile-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  border: none;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+  width: 100%;
+}
+.managed-profile-item:last-child { border-bottom: none; }
+.managed-profile-item:hover { background: var(--bg); }
+.managed-profile-item--active { background: var(--primary-50); }
+.managed-profile-info { flex: 1; min-width: 0; }
+.managed-profile-name { font-size: 13px; font-weight: 700; color: var(--text-primary); }
+.managed-profile-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
+.managed-profile-count { font-size: 11px; color: var(--primary); font-weight: 600; margin-top: 2px; }
+
+/* ── Main panel ──────────────────────────────────────────────────────────────── */
+.managed-account__main { display: flex; flex-direction: column; gap: 16px; }
+
+.managed-profile-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+}
+
+.managed-records-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+/* ── Record cards ────────────────────────────────────────────────────────────── */
+.managed-records-list { display: flex; flex-direction: column; gap: 10px; }
+
+.managed-record {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all .2s;
+}
+.managed-record:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.managed-record__icon {
+  width: 40px; height: 40px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.managed-record__body { flex: 1; min-width: 0; }
+.managed-record__top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.managed-record__title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.managed-record__meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.managed-record__meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.managed-record__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+  .managed-account__layout { grid-template-columns: 1fr; }
+  .managed-account__header { flex-direction: column; align-items: flex-start; }
+}

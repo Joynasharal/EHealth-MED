@@ -19,6 +19,7 @@ import HealthInsights from './pages/HealthInsights';
 import ShareAccess from './pages/ShareAccess';
 import DoctorDashboard from './pages/DoctorDashboard';
 import Settings from './pages/Settings';
+import ManagedAccount from './pages/ManagedAccount';
 
 const GOOGLE_CLIENT_ID = process.env.REACT_APP_GOOGLE_CLIENT_ID || '';
 
@@ -54,6 +55,7 @@ function AppRoutes() {
         <Route path="insights" element={<HealthInsights />} />
         <Route path="share" element={<ShareAccess />} />
         <Route path="doctor" element={<DoctorDashboard />} />
+        <Route path="managed-account/:ownerUserId" element={<ManagedAccount />} />
         <Route path="settings" element={<Settings />} />
       </Route>
     </Routes>

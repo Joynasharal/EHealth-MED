@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Share2, Mail, Clock, Shield, Trash2, Plus, Upload,
-  CheckCircle, XCircle, AlertCircle, User, RefreshCw, Eye
+  Share2, Mail, Clock, Shield, Trash2, Plus,
+  CheckCircle, XCircle, AlertCircle, User, RefreshCw,
+  Eye, Upload, Settings, Search, Loader
 } from 'lucide-react';
 import { useProfile } from '../context/ProfileContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,16 +20,19 @@ const StatusBadge = ({ access }) => {
 };
 
 // ─── Access type badge ────────────────────────────────────────────────────────
-const AccessTypeBadge = ({ type }) => (
-  type === 'upload'
-    ? <span className="badge badge-purple"><Upload size={11} /> View + Upload</span>
-    : <span className="badge badge-blue"><Eye size={11} /> View Only</span>
-);
+const AccessTypeBadge = ({ type }) => {
+  if (type === 'manage') return <span className="badge badge-red"><Settings size={11} /> Full Manage</span>;
+  if (type === 'upload') return <span className="badge badge-purple"><Upload size={11} /> View + Upload</span>;
+  return <span className="badge badge-blue"><Eye size={11} /> View Only</span>;
+};
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
-const Avatar = ({ name, size = 40 }) => {
+const Avatar = ({ name, photo, size = 40 }) => {
   const colors = ['#2563eb', '#7c3aed', '#059669', '#d97706', '#0891b2', '#db2777'];
   const bg = colors[(name?.charCodeAt(0) || 0) % colors.length];
+  if (photo) return (
+    <img src={photo} alt={name} style={{ width: size, height: size, borderRadius: 12, objectFit: 'cover', flexShrink: 0 }} />
+  );
   return (
     <div style={{
       width: size, height: size, borderRadius: 12, background: bg,
@@ -45,10 +50,33 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
     targetEmail: '', profileId: '', accessType: 'view', expiryDays: '7', customExpiry: '',
   });
   const [saving, setSaving] = useState(false);
+  const [lookupState, setLookupState] = useState(null); // null | 'loading' | { found, user }
+  const debounceRef = useRef(null);
+
+  // Debounced email lookup
+  const handleEmailChange = (email) => {
+    setForm((f) => ({ ...f, targetEmail: email }));
+    setLookupState(null);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return;
+    debounceRef.current = setTimeout(async () => {
+      setLookupState('loading');
+      try {
+        const { data } = await api.get(`/access/lookup-user?email=${encodeURIComponent(email)}`);
+        setLookupState(data);
+      } catch {
+        setLookupState(null);
+      }
+    }, 600);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.profileId) { toast.error('Please select a profile'); return; }
+    if (form.accessType === 'manage' && (!lookupState || !lookupState.found)) {
+      toast.error('User must have an account to receive manage access');
+      return;
+    }
     setSaving(true);
     try {
       await api.post('/access/share', form);
@@ -61,31 +89,74 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
     }
   };
 
+  const ACCESS_TYPES = [
+    {
+      id: 'view',
+      icon: Eye,
+      title: 'View Only',
+      desc: 'Can view records and AI summary',
+      color: '#2563eb',
+    },
+    {
+      id: 'upload',
+      icon: Upload,
+      title: 'View + Upload',
+      desc: 'Can view and add medical records',
+      color: '#7c3aed',
+    },
+    {
+      id: 'manage',
+      icon: Settings,
+      title: 'Full Manage',
+      desc: 'Can view, upload, edit and delete records. User must have an account.',
+      color: '#dc2626',
+    },
+  ];
+
   return (
     <div className="card share-form fade-in">
       <div className="share-form__header">
-        <div className="share-form__header-icon">
-          <Share2 size={18} />
-        </div>
+        <div className="share-form__header-icon"><Share2 size={18} /></div>
         <div>
           <h3>New Access Grant</h3>
-          <p>Share a profile with a doctor or family member</p>
+          <p>Share a profile with a family member or doctor</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="grid-2">
+          {/* Email with live lookup */}
           <div className="form-group">
             <label className="form-label">Recipient Email *</label>
             <div className="share-input-wrap">
               <Mail size={15} className="share-input-icon" />
               <input type="email" className="form-input" style={{ paddingLeft: 38 }}
-                placeholder="doctor@hospital.com"
+                placeholder="family@example.com"
                 value={form.targetEmail}
-                onChange={(e) => setForm({ ...form, targetEmail: e.target.value })}
+                onChange={(e) => handleEmailChange(e.target.value)}
                 required />
+              {lookupState === 'loading' && (
+                <Loader size={14} className="share-input-status spin-icon" />
+              )}
+              {lookupState && lookupState !== 'loading' && lookupState.found && (
+                <CheckCircle size={14} className="share-input-status" style={{ color: '#059669' }} />
+              )}
+              {lookupState && lookupState !== 'loading' && !lookupState.found && (
+                <AlertCircle size={14} className="share-input-status" style={{ color: '#d97706' }} />
+              )}
             </div>
+            {/* Lookup result */}
+            {lookupState && lookupState !== 'loading' && (
+              <div className={`share-lookup-result ${lookupState.found ? 'share-lookup-result--found' : 'share-lookup-result--notfound'}`}>
+                {lookupState.found ? (
+                  <><CheckCircle size={12} /> Found: <strong>{lookupState.user.fullName}</strong></>
+                ) : (
+                  <><AlertCircle size={12} /> No account found with this email. View/Upload access can still be granted.</>
+                )}
+              </div>
+            )}
           </div>
+
           <div className="form-group">
             <label className="form-label">Profile to Share *</label>
             <select className="form-input" value={form.profileId}
@@ -104,25 +175,24 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
         <div className="form-group">
           <label className="form-label">Permission Level</label>
           <div className="access-type-selector">
-            <button type="button"
-              className={`access-type-btn ${form.accessType === 'view' ? 'access-type-btn--active' : ''}`}
-              onClick={() => setForm({ ...form, accessType: 'view' })}>
-              <Shield size={16} />
-              <div>
-                <p className="access-type-btn__title">View Only</p>
-                <p className="access-type-btn__desc">Can view records and AI summary</p>
-              </div>
-            </button>
-            <button type="button"
-              className={`access-type-btn ${form.accessType === 'upload' ? 'access-type-btn--active' : ''}`}
-              onClick={() => setForm({ ...form, accessType: 'upload' })}>
-              <Upload size={16} />
-              <div>
-                <p className="access-type-btn__title">View + Upload</p>
-                <p className="access-type-btn__desc">Can view and add medical records</p>
-              </div>
-            </button>
+            {ACCESS_TYPES.map(({ id, icon: Icon, title, desc, color }) => (
+              <button key={id} type="button"
+                className={`access-type-btn ${form.accessType === id ? 'access-type-btn--active' : ''}`}
+                style={form.accessType === id ? { borderColor: color, background: color + '10' } : {}}
+                onClick={() => setForm({ ...form, accessType: id })}>
+                <Icon size={16} style={form.accessType === id ? { color } : {}} />
+                <div>
+                  <p className="access-type-btn__title" style={form.accessType === id ? { color } : {}}>{title}</p>
+                  <p className="access-type-btn__desc">{desc}</p>
+                </div>
+              </button>
+            ))}
           </div>
+          {form.accessType === 'manage' && lookupState && !lookupState.found && (
+            <p style={{ fontSize: 12, color: '#dc2626', marginTop: 6 }}>
+              ⚠ Manage access requires the recipient to have an account.
+            </p>
+          )}
         </div>
 
         {/* Expiry */}
@@ -166,7 +236,8 @@ const ShareForm = ({ profiles, onSuccess, onCancel }) => {
 const ShareAccess = () => {
   const { profiles } = useProfile();
   const { user } = useAuth();
-  const [tab, setTab] = useState('granted'); // 'granted' | 'received'
+  const navigate = useNavigate();
+  const [tab, setTab] = useState('granted');
   const [grantedList, setGrantedList] = useState([]);
   const [receivedList, setReceivedList] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -216,18 +287,17 @@ const ShareAccess = () => {
 
   return (
     <div className="share-page fade-in">
-      {/* Header */}
       <div className="page-header share-page__header">
         <div>
           <h1>Share Access</h1>
-          <p>Grant temporary, permission-controlled access to your medical profiles</p>
+          <p>Grant permission-controlled access to your medical profiles</p>
         </div>
         <button className="btn btn-primary" onClick={() => setShowForm(!showForm)}>
           <Plus size={16} /> Share Access
         </button>
       </div>
 
-      {/* Stats row */}
+      {/* Stats */}
       <div className="share-stats">
         <div className="share-stat card">
           <div className="share-stat__icon" style={{ background: '#eff6ff', color: '#2563eb' }}>
@@ -258,7 +328,6 @@ const ShareAccess = () => {
         </div>
       </div>
 
-      {/* Share form */}
       {showForm && (
         <ShareForm
           profiles={profiles}
@@ -269,15 +338,11 @@ const ShareAccess = () => {
 
       {/* Tabs */}
       <div className="share-tabs">
-        <button
-          className={`share-tab ${tab === 'granted' ? 'share-tab--active' : ''}`}
-          onClick={() => setTab('granted')}>
+        <button className={`share-tab ${tab === 'granted' ? 'share-tab--active' : ''}`} onClick={() => setTab('granted')}>
           <Share2 size={15} /> Access I've Granted
           {activeGrantedCount > 0 && <span className="share-tab__badge">{activeGrantedCount}</span>}
         </button>
-        <button
-          className={`share-tab ${tab === 'received' ? 'share-tab--active' : ''}`}
-          onClick={() => setTab('received')}>
+        <button className={`share-tab ${tab === 'received' ? 'share-tab--active' : ''}`} onClick={() => setTab('received')}>
           <User size={15} /> Shared With Me
           {receivedList.length > 0 && <span className="share-tab__badge">{receivedList.length}</span>}
         </button>
@@ -300,7 +365,7 @@ const ShareAccess = () => {
           onShare={() => setShowForm(true)}
         />
       ) : (
-        <ReceivedTab list={receivedList} />
+        <ReceivedTab list={receivedList} navigate={navigate} />
       )}
     </div>
   );
@@ -323,7 +388,6 @@ const GrantedTab = ({ list, allList, filterStatus, setFilterStatus, onRevoke, on
 
   return (
     <div>
-      {/* Filter bar */}
       <div className="share-filter-bar">
         {['all', 'active', 'expired', 'revoked'].map((s) => (
           <button key={s}
@@ -351,7 +415,8 @@ const GrantedTab = ({ list, allList, filterStatus, setFilterStatus, onRevoke, on
             return (
               <div key={access._id} className={`access-card card ${!isActive ? 'access-card--inactive' : ''}`}>
                 <div className="access-card__left">
-                  <Avatar name={access.targetEmail} size={44} />
+                  <Avatar name={access.targetUserId?.fullName || access.targetEmail}
+                    photo={access.targetUserId?.profilePhoto} size={44} />
                   <div>
                     <p className="access-card__name">
                       {access.targetUserId?.fullName || access.targetEmail}
@@ -393,7 +458,7 @@ const GrantedTab = ({ list, allList, filterStatus, setFilterStatus, onRevoke, on
 };
 
 // ─── Received tab ─────────────────────────────────────────────────────────────
-const ReceivedTab = ({ list }) => {
+const ReceivedTab = ({ list, navigate }) => {
   if (list.length === 0) {
     return (
       <div className="empty-state card" style={{ padding: '60px 20px' }}>
@@ -404,36 +469,73 @@ const ReceivedTab = ({ list }) => {
     );
   }
 
+  // Group by owner so manage-access entries are grouped together
+  const grouped = {};
+  list.forEach((access) => {
+    const ownerId = access.ownerUserId?._id || access.ownerUserId;
+    if (!grouped[ownerId]) {
+      grouped[ownerId] = { owner: access.ownerUserId, accesses: [] };
+    }
+    grouped[ownerId].accesses.push(access);
+  });
+
   return (
     <div className="access-cards">
-      {list.map((access) => (
-        <div key={access._id} className="access-card access-card--received card">
-          <div className="access-card__left">
-            <Avatar name={access.ownerUserId?.fullName} size={44} />
-            <div>
-              <p className="access-card__name">{access.ownerUserId?.fullName}</p>
-              <p className="access-card__email">{access.ownerUserId?.email}</p>
-              <p className="access-card__profile">
-                Profile: <strong>{access.profileId?.profileName}</strong>
-                {access.profileId?.actualName ? ` (${access.profileId.actualName})` : ''}
-                {' · '}{access.profileId?.age}y · {access.profileId?.gender}
-              </p>
+      {Object.values(grouped).map(({ owner, accesses }) => {
+        const hasManage = accesses.some((a) => a.accessType === 'manage');
+        const highestAccess = hasManage ? 'manage'
+          : accesses.some((a) => a.accessType === 'upload') ? 'upload' : 'view';
+
+        // Earliest expiry among all grants from this owner
+        const soonestExpiry = accesses.reduce((min, a) =>
+          new Date(a.expiryDate) < new Date(min) ? a.expiryDate : min,
+          accesses[0].expiryDate
+        );
+
+        return (
+          <div key={owner?._id} className="access-card access-card--received card">
+            <div className="access-card__left">
+              <Avatar name={owner?.fullName} photo={owner?.profilePhoto} size={44} />
+              <div>
+                <p className="access-card__name">{owner?.fullName}</p>
+                <p className="access-card__email">{owner?.email}</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
+                  {accesses.map((a) => (
+                    <span key={a._id} style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                      {a.profileId?.profileName}
+                      {a.profileId?.actualName ? ` (${a.profileId.actualName})` : ''}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="access-card__meta">
+              <AccessTypeBadge type={highestAccess} />
+              <div className="access-card__expiry">
+                <Clock size={12} />
+                <span>Expires {formatDistanceToNow(new Date(soonestExpiry), { addSuffix: true })}</span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+              {hasManage ? (
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => navigate(`/managed-account/${owner?._id}`)}>
+                  <Settings size={13} /> Manage Account
+                </button>
+              ) : (
+                <button
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => navigate('/doctor')}>
+                  <Eye size={13} /> View Records
+                </button>
+              )}
             </div>
           </div>
-
-          <div className="access-card__meta">
-            <AccessTypeBadge type={access.accessType} />
-            <div className="access-card__expiry">
-              <Clock size={12} />
-              <span>Expires {formatDistanceToNow(new Date(access.expiryDate), { addSuffix: true })}</span>
-            </div>
-          </div>
-
-          <a href="/doctor" className="btn btn-secondary btn-sm">
-            <Eye size={13} /> View Records
-          </a>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

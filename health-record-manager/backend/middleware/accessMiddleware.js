@@ -53,10 +53,10 @@ const checkProfileAccess = async (req, res, next) => {
 };
 
 /**
- * Middleware: require upload permission (owner or upload access type)
+ * Middleware: require upload permission (owner, upload, or manage access type)
  */
 const requireUploadAccess = (req, res, next) => {
-  if (req.accessType === 'owner' || req.accessType === 'upload') {
+  if (req.accessType === 'owner' || req.accessType === 'upload' || req.accessType === 'manage') {
     return next();
   }
   return res.status(403).json({
